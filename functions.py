@@ -486,8 +486,9 @@ def dsigmoid (a, x):
   return a[1]*a[2]*Exp/(1 + Exp)**2 #
 def plot_sigmoid(x, a, wc, h, l1, l2, x_max):
   '''
-  Function for plot, sigmoid, derivate sigmodi, boundaries and intersection
+  Function for plot, sigmoid, derivate sigmoid, boundaries and intersection
   '''
+  cs = [(0,0,0), (0.3,0.3,0.3), (0.7,0.7,0.7)]
   lb = a[0];    ub = a[0] + a[1]  # boundaries
   fig, ax = plt.subplots(1, 1)    # create curve
   y_max = sigmoid(a, x_max)       # y of maximum dy
@@ -496,19 +497,21 @@ def plot_sigmoid(x, a, wc, h, l1, l2, x_max):
   b = y_max - m*x_max             # y intersection
   yplot = np.linspace(lb, ub)     # linspace between boundaries
   # plot sigmoid function-------------------------------------------------
-  ax.plot(x, sigmoid(a, x), '-', color='black', label='sigmoid function')
-  ax.plot(wc[2:-1], h[2:-1], 'o', color='black', label='laboratory data') # sigmoid
-  ax.set_xlabel('$wc$ [%]');    ax.set_ylabel('$H$ [m]')      # lab data
+  ax.plot(x, sigmoid(a, x), '-',  color=cs[1], label='$H$ sigmoid')
+  ax.plot(wc[2:-1], h[2:-1], 'o', color=cs[1], label='$H$ laboratory') 
+  ax.set_xlabel('$wc$ [%]');      ax.set_xlim([0,100])
+  ax.set_ylabel('$H$ [m]', color=cs[1])      # lab data
   # plot first derivate of sigmoid function -----------------------------
-  ax2 = ax.twinx()                                  # duplicate axis
-  ax2.plot(x, dsigmoid(a, x), '-', color='red')     # plot derivative
-  ax2.set_ylabel('$H\'$', color='red')              # y label
+  ax2 = ax.twinx()                            # duplicate axis
+  ax2.plot(x, dsigmoid(a, x), '--', color=cs[0], label='$H\'$')
+  ax2.set_ylim([0, dsigmoid(a, x).max()])     # plot derivative
+  ax2.set_ylabel('$H\'$', color=cs[0])        # y label
   # plot boundaries -----------------------------------------------------
-  ax.vlines([wc[l1], wc[l2]] , lb, ub, linestyles='--', color='gray')  
-  ax.hlines([lb, ub] , 0, 100,         linestyles='--', color='gray')  
-  ax.plot(x_max, y_max, 'd', color='gray')          # center
-  ax.plot( (yplot-b)/m, yplot , '--', color='gray') # line
-  ax.legend(loc = 'center right');   plt.show()
+  ax.vlines([wc[l1], wc[l2]] , lb, ub, linestyles=':', color=cs[2])  
+  ax.hlines([lb, ub] , 0, 100,         linestyles=':', color=cs[2])  
+  ax.plot(x_max, y_max, 'x', color=cs[2])          # center
+  ax.plot( (yplot-b)/m, yplot , ':', color=cs[2])  # line
+  fig.legend(bbox_to_anchor=(0.9, 0.3))
 #==fast fourier transform ==================================================#
 def dft(x, fs, n, type='amp'):
   '''having the signal in frequency domain wit 
