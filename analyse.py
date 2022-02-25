@@ -215,6 +215,25 @@ for key in keys:
   plt.plot(y, X[features[-1]], '.', color='dimgray')  # plot best feature
   plt.xlabel('$T_{a}$'); plt.ylabel(features[-1]);    plt.show()  # format
 
+# %%
+# ==========================================================================
+def likelihood (y, values):
+  ''' likelihood of every value of (values) in y numpy array'''
+  s = len(y) if len(y)!=0 else 1  # len of y corrected by zero division
+  return np.array([len(np.where(y==v)[0])/s for v in values])
+def gini (y, classes, weights=np.empty((0))):
+  '''considering the (y) np array, encouter the gini coefficient for 
+  classes and the weights '''
+  weights = np.ones(len(classes)) if len(weights)==0 else weights
+  return 1 - np.sum((likelihood(y, classes)*weights)**2)
+def impurity(y, threshold, weighted=False):
+  '''y impurity divided in threshold based on gini criteria'''
+  c, mj = np.unique(y, return_counts=True)    # classes
+  w = np.sum(mj)/(len(mj)*mj) if weighted==True else np.ones(len(c)) #weights
+  left = np.where(x<=threshold)[0];   right = np.where(x>threshold)[0]
+  return np.sum([len(i) /len(y)*gini(y[i], c, w) for i in [left, right]])
+
+
 # %% =======================================================================
 # Pearson Correlation
 # ==========================================================================
@@ -253,30 +272,6 @@ for key in keys:
   plt.show()
 
 
-# %%
-# ==========================================================================
-def likelihood (y, values):
-  ''' likelihood of every value of (values) in y numpy array'''
-  s = len(y) if len(y)!=0 else 1  # len of y corrected by zero division
-  return np.array([len(np.where(y==v)[0])/s for v in values])
-def gini (y, classes, weights=np.empty((0))):
-  '''considering the (y) np array, encouter the gini coefficient for 
-  classes and the weights '''
-  weights = np.ones(len(classes)) if len(weights)==0 else weights
-  return 1 - np.sum((likelihood(y, classes)*weights)**2)
-def entropy (y, classes, weights=np.empty((0))):
-  '''considering the (y) np array, encouter the gini coefficient for 
-  classes and the weights '''
-  weights = np.ones(len(classes)) if len(weights)==0 else weights
-  p = np.abs(likelihood(y, classes)*weights)
-  return np.sum(p/(1-p))
-def impurity(y, threshold, weighted=False, kind='gini'):
-  '''y impurity divided in threshold based on gini criteria'''
-  c, mj = np.unique(y, return_counts=True)    # classes
-  w = np.sum(mj)/(len(mj)*mj) if weighted==True else np.ones(len(c)) #weights
-  left = np.where(x<=threshold)[0];   right = np.where(x>threshold)[0]
-  fun = gini if kind=='gini' else entropy
-  return np.sum([len(i) /len(y)*fun(y[i], c, w) for i in [left, right]])
 
 
 # %%
