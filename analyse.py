@@ -4,13 +4,13 @@
 from click import style
 from silx.io.dictdump import h5todict, dicttoh5 # import, export h5 files
 import numpy as np                              # mathematics
-import pandas as pd                             # mathematics
+import pandas as pd                             # mathematics\
 import glob                                     #  inspect folders
 import matplotlib.pyplot as plt                 # Plot several images
 from functions import printProgressBar, create_folder, dft
 from functions import sigmoid, dsigmoid, plot_sigmoid
 from functions import enum_vec, time_elapsed, enum_vec, filter_nan
-from functions_signal import get_z, Colormesh, Norm2, plot_lims
+from functions_signal import get_z, Colormesh, Norm2, plot_lims, Norm
 from sklearn import metrics, feature_selection  # metrics decision tree
 from tikzplotlib import save as tikz_save
 import time                                     # time calculation
@@ -86,7 +86,6 @@ plt.legend(loc='upper right')
 #%% ========================================================================
 # Sigmoid functions
 # ==========================================================================
-
 # Getting  bound between water-in-oil & transition & oil-in-water ----------
 print('███████████████████ Genering sigmoid function ████████████████████')
 curve = curves[6]        # for every curve
@@ -226,6 +225,9 @@ def gini (y, classes, weights=np.empty((0))):
   classes and the weights '''
   weights = np.ones(len(classes)) if len(weights)==0 else weights
   return 1 - np.sum((likelihood(y, classes)*weights)**2)
+def logit(y, c):
+  p = likelihood(y, c)
+  return np.log(p/(1-p))
 def impurity(y, threshold, weighted=False):
   '''y impurity divided in threshold based on gini criteria'''
   c, mj = np.unique(y, return_counts=True)    # classes
@@ -249,26 +251,33 @@ for key in keys:
   fig, axs = plt.subplots(3, 1)
   for ax, j  in zip(axs, [30, 40, 50]):
     i = DF[DF['class']!=0][np.round(DF['w']/60)==j].index
-    x = np.array(PR['fft_rms_0_2hHz' ].loc[i])
-    y = np.array(DF['class'].loc[i])
-    y_imp = np.empty((0))
-    x_imp = np.linspace(x.min(), x.max(), num=10000)
-    for i in x_imp:
-      y_imp = np.r_[y_imp, impurity(y, i)]
-    ax.plot(x, y, 'o')
-    i_imp = np.where(y_imp==np.min(y_imp))[0]
+    x = np.array(PR[ z ].loc[i])
+    y = 2 - np.array(DF['class'].loc[i])
+    
+    ax.plot(x, y, 'o', color='k')    
+    m, b, _, _, _ = linregress(x,y)
+    x_imp = np.linspace(x.min(), x.max(), num=1000)
+    y_imp = m*x_imp + b
+    ax.plot(x_imp, y_imp, '--', color='orange')
+
+    p = 1/(1 + np.exp(-y_imp))
+    dp = dsigmoid ([0, 1, m, -b/m], x_imp)
+    ax.vlines(x_imp[np.where(p>=0.5)[0][0]],
+      0, 1, color='red', linestyles=':')
+    ax.plot(x_imp, p, '--', color='red')
     ax2 = ax.twinx()
-    ax2.plot(x_imp, y_imp, '--', color='orange')
-    ax2.plot(x_imp[i_imp], y_imp[i_imp], '.', color='green')
-    bounds = Bounds([x.min()], [x.max()])
-    fun = lambda t: impurity(y,t[0])
-    opt = minimize(fun, [x.mean()], bounds=bounds, method='powell')
-    threshold = opt.x[0]
-    lb, ub = (np.nanmin(y_imp)*0.98, 2.1)
-    ax.vlines(x_imp[i_imp[ [0, int(len(i_imp)/2), len(i_imp)-1] ]],
-      lb, ub, color='black', linestyles=':')
-    ax.vlines([threshold], lb, ub, color='black')
-    ax.set_ylim([lb, ub])
+    ax2.plot(x_imp, dp, '-', color='red')
+
+    #ax2.plot(x_imp[i_imp], y_imp[i_imp], '.', color='green')
+    #bounds = Bounds([x.min()], [x.max()])
+    #fun = lambda t: impurity(y,t[0])
+    #opt = minimize(fun, [x.mean()], bounds=bounds, method='powell')
+    #threshold = opt.x[0]
+    #lb, ub = (np.nanmin(y_imp)*0.98, 2.1)
+    #ax.vlines(x_imp[i_imp[ [0, int(len(i_imp)/2), len(i_imp)-1] ]],
+    #  lb, ub, color='black', linestyles=':')
+    #ax.vlines([threshold], lb, ub, color='black')
+    #ax.set_ylim([lb, ub])
   plt.show()
 
 
