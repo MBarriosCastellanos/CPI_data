@@ -252,21 +252,22 @@ for key in keys:
   for ax, j  in zip(axs, [30, 40, 50]):
     i = DF[DF['class']!=0][np.round(DF['w']/60)==j].index
     x = np.array(PR[ z ].loc[i])
-    y = 2 - np.array(DF['class'].loc[i])
+    y = np.array(DF['class'].loc[i])
     
     ax.plot(x, y, 'o', color='k')    
-    m, b, _, _, _ = linregress(x,y)
+    m, b, _, _, _ = linregress(np.log((1-y)/y),x)
+    b_1 = -1/m; b_0 = -b*b_1
     x_imp = np.linspace(x.min(), x.max(), num=1000)
-    y_imp = m*x_imp + b
+    y_imp = b_0*x_imp + b_1
     ax.plot(x_imp, y_imp, '--', color='orange')
 
-    p = 1/(1 + np.exp(-y_imp))
-    dp = dsigmoid ([0, 1, m, -b/m], x_imp)
-    ax.vlines(x_imp[np.where(p>=0.5)[0][0]],
-      0, 1, color='red', linestyles=':')
-    ax.plot(x_imp, p, '--', color='red')
-    ax2 = ax.twinx()
-    ax2.plot(x_imp, dp, '-', color='red')
+    #p = 1/(1 + np.exp(-y_imp))
+    #dp = dsigmoid ([0, 1, m, -b/m], x_imp)
+    #ax.vlines(x_imp[np.where(p>=0.5)[0][0]],
+    #  0, 1, color='red', linestyles=':')
+    #ax.plot(x_imp, p, '--', color='red')
+    #ax2 = ax.twinx()
+    #ax2.plot(x_imp, dp, '-', color='red')
 
     #ax2.plot(x_imp[i_imp], y_imp[i_imp], '.', color='green')
     #bounds = Bounds([x.min()], [x.max()])
