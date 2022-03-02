@@ -183,6 +183,11 @@ for i,j in [(0,3), (3,7), (7,10)]:
   plt.tight_layout()
   plt.show()
 
+
+# %% =======================================================================
+# Spectrum
+# ==========================================================================
+
   
 # %% =======================================================================
 # Pearson Correlation
@@ -239,6 +244,17 @@ def impurity(y, threshold, weighted=False):
 # %% =======================================================================
 # Pearson Correlation
 # ==========================================================================
+logit = lambda b, x : 1/ (1 + np.exp( -(b[0] + b[1]*x) ) )
+def cost(b, x, y):
+  p = logit(b, x)
+  c = - (1/len(x)) * (y*np.log(p) + (1 - y)*np.log(1 - p) )
+  inan = np.where(np.isnan(c))[0]
+  c[inan] = 1.0
+  return np.sum(c)
+from numpy.random import default_rng
+
+
+#%%
 for key in keys:
   print('the selected key is ███ %s ███'%(key))
   norm = 'log'
@@ -248,38 +264,40 @@ for key in keys:
   z = 'fft_rms_0_2hHz'                          # easy limits plot for analysis
   #A = plot_lims(DF, PR, 'lin', z, deg=1, title=z)   # 
   #A = plot_lims(DF, PR, 'lin', z, deg=1, norm=1, title=z)
-  fig, axs = plt.subplots(3, 1)
+  fig, axs = plt.subplots(3, 1, sharex=True)
+  fig.suptitle(key,x=0.2)
   for ax, j  in zip(axs, [30, 40, 50]):
-    i = DF[DF['class']!=0][np.round(DF['w']/60)==j].index
-    x = np.array(PR[ z ].loc[i])
-    y = np.array(DF['class'].loc[i])
+    ii = DF[np.round(DF['w']/60)==j][DF['class']!=0].index
+    rng = default_rng(25)
+    numbers = rng.choice(len(ii), size=int(len(ii)/4), replace=False)
+    numbers2 = [j for j in range(len(ii)) if all(j!=numbers)]
     
-    ax.plot(x, y, 'o', color='k')    
-    m, b, _, _, _ = linregress(np.log((1-y)/y),x)
-    b_1 = -1/m; b_0 = -b*b_1
+    x = np.array(PR[ z ].loc[ii])
+    y = 2 - np.array(DF['class'].loc[ii])
+    x_train = x[numbers]
+    y_train = y[numbers]
+
+    ax.plot(x_train, y_train, '.', color='k')    
+    ax.plot(x[numbers2], y[numbers2], 'x', color='k') 
+    ax.set_xlim([x.min(), x.max()])
+    ax.set_ylim([-0.05, 1.05])
+
+    b = [0, 0]
+    b[1], b[0], _, _, _ = linregress(x_train,y_train)
+    b = minimize(lambda b: cost(b, x_train, y_train), b).x
     x_imp = np.linspace(x.min(), x.max(), num=1000)
-    y_imp = b_0*x_imp + b_1
-    ax.plot(x_imp, y_imp, '--', color='orange')
+    p_imp = logit(b, x_imp)
+    ax.plot(x_imp, p_imp, '--', color='gray')
+    ax.vlines(x_imp[np.where(p_imp>=0.5)[0][0]],
+      -0.1, 1.1, color='gray', linestyles=':')
+    ax.set_ylabel('class %s [Hz]'%j)
+    ax.set_yticks([0, 0.5, 1])
+    ax.grid('on')
+  fig.legend(['train', 'test', 'logit function'], 
+    fontsize=12, bbox_to_anchor=(0.99, 0.995), ncol=3)
+  ax.set_xlabel(z)
+  
 
-    #p = 1/(1 + np.exp(-y_imp))
-    #dp = dsigmoid ([0, 1, m, -b/m], x_imp)
-    #ax.vlines(x_imp[np.where(p>=0.5)[0][0]],
-    #  0, 1, color='red', linestyles=':')
-    #ax.plot(x_imp, p, '--', color='red')
-    #ax2 = ax.twinx()
-    #ax2.plot(x_imp, dp, '-', color='red')
-
-    #ax2.plot(x_imp[i_imp], y_imp[i_imp], '.', color='green')
-    #bounds = Bounds([x.min()], [x.max()])
-    #fun = lambda t: impurity(y,t[0])
-    #opt = minimize(fun, [x.mean()], bounds=bounds, method='powell')
-    #threshold = opt.x[0]
-    #lb, ub = (np.nanmin(y_imp)*0.98, 2.1)
-    #ax.vlines(x_imp[i_imp[ [0, int(len(i_imp)/2), len(i_imp)-1] ]],
-    #  lb, ub, color='black', linestyles=':')
-    #ax.vlines([threshold], lb, ub, color='black')
-    #ax.set_ylim([lb, ub])
-  plt.show()
 
 
 
