@@ -497,15 +497,15 @@ def plot_sigmoid(x, a, wc, h, l1, l2, x_max):
   b = y_max - m*x_max             # y intersection
   yplot = np.linspace(lb, ub)     # linspace between boundaries
   # plot sigmoid function-------------------------------------------------
-  ax.plot(x, sigmoid(a, x), '-',  color=cs[1], label='$H$ sigmoid')
-  ax.plot(wc[2:-1], h[2:-1], 'o', color=cs[1], label='$H$ laboratory') 
+  ax.plot(x, sigmoid(a, x), '-',  color=cs[1], label='$h$ sigmoid')
+  ax.plot(wc[2:-1], h[2:-1], 'o', color=cs[1], label='$h$ laboratory') 
   ax.set_xlabel('$wc$ [%]');      ax.set_xlim([0,100])
-  ax.set_ylabel('$H$ [m]', color=cs[1])      # lab data
+  ax.set_ylabel('$h$ [m]', color=cs[1])      # lab data
   # plot first derivate of sigmoid function -----------------------------
   ax2 = ax.twinx()                            # duplicate axis
-  ax2.plot(x, dsigmoid(a, x), '--', color=cs[0], label='$H\'$')
+  ax2.plot(x, dsigmoid(a, x), '--', color=cs[0], label='$h\'$')
   ax2.set_ylim([0, dsigmoid(a, x).max()])     # plot derivative
-  ax2.set_ylabel('$H\'$', color=cs[0])        # y label
+  ax2.set_ylabel('$h \'$', color=cs[0])        # y label
   # plot boundaries -----------------------------------------------------
   ax.vlines([wc[l1], wc[l2]] , lb, ub, linestyles=':', color=cs[2])  
   ax.hlines([lb, ub] , 0, 100,         linestyles=':', color=cs[2])  
@@ -615,7 +615,6 @@ def filter_df(df, column, threshold, change=''):
   print('%s shape = %s after  filter by %s'%(df_name, df.shape, column))
   return df
 # filter df by nan and inf =================================================#
-
 def filter_nan(X):
   ''' function to delete dataframe columns with NaN or Inf values.'''
   print('features with    Inf and NaN = {} '.format(len(X.columns)))
@@ -625,3 +624,22 @@ def filter_nan(X):
   X = X[np.delete(X.columns, exclude)]  # delete columns selected
   print('features without Inf and NaN = {} '.format(len(X.columns)))
   return X
+# function to split data   =================================================#
+def likelihood (y, values):
+  ''' likelihood of every value of (values) in y numpy array'''
+  s = len(y) if len(y)!=0 else 1  # len of y corrected by zero division
+  return np.array([len(np.where(y==v)[0])/s for v in values])
+def gini (y, classes, weights=np.empty((0))):
+  '''considering the (y) np array, encouter the gini coefficient for 
+  classes and the weights '''
+  weights = np.ones(len(classes)) if len(weights)==0 else weights
+  return 1 - np.sum((likelihood(y, classes)*weights)**2)
+def logit(y, c):
+  p = likelihood(y, c)
+  return np.log(p/(1-p))
+def impurity(x, y, threshold, weighted=False):
+  '''y impurity divided in threshold based on gini criteria'''
+  c, mj = np.unique(y, return_counts=True)    # classes
+  w = np.sum(mj)/(len(mj)*mj) if weighted==True else np.ones(len(c)) #weights
+  left = np.where(x<=threshold)[0];   right = np.where(x>threshold)[0]
+  return np.sum([len(i) /len(y)*gini(y[i], c, w) for i in [left, right]])
