@@ -107,10 +107,56 @@ def pearson_bar(DF, PR, y_i, ylabel, ini='', end='', n=15):
   return fig, features
 logit = lambda b, x : 1/ (1 + np.exp( -(b[0] + b[1]*x) ) )
 def cost(b, x, y):
+  '''cost function to logit regression'''
   p = logit(b, x)
   c = - (1/len(x)) * (y*np.log(p) + (1 - y)*np.log(1 - p) )
   i = np.where(np.isnan(c))[0]; c[i] = 1.0
   return np.sum(c)
+def scatter(DF, PR, curves, pr_i, key):
+  '''scatter of curves and class'''
+  x = y = z =np.empty((0,));      labels = []                 # empty
+  for j, curve in enumerate(curves):      # for every curve 
+    df = DF[DF['curve']==curve]           # dataframe particular
+    labels.append(label1(df['w'].mean(), df['mu'].mean(), df['Q'].mean()))
+    x = np.r_[x, PR[pr_i].iloc[df.index]] # parameter
+    y = np.r_[y, j*np.ones(len(df))   ]   # curves
+    z = np.r_[z, df['class']]             # classes
+  fig, ax = plt.subplots(1, 1) # plot best features ------------------------
+  colors = [(.6, .6, .6), (.5, .5, .5), (.0, .0, .0)] # colors for 
+  for i, m in enumerate(['_', 'o', 's']):   # for every class  
+    I = np.where(z==i)[0]                   # index
+    ax.plot(x[I], y[I], m, color=colors[i]) # plot 
+  ax.set_xlabel(pr_i);                ax.set_title(key)
+  ax.set_yticks(range(len(curves)));  ax.set_yticklabels(labels)
+  ax.legend(['transition', 'water-in-oil', 'oil-in-water'])
+  return fig
+def plot_logit(LG, bs, key, feat):
+  fig, axs = plt.subplots(3, 1, sharex=True);
+  fig.suptitle(key,x=0.2, y=0.93, fontsize=14)
+  for ax, w, b, in zip(axs, [30, 40, 50], bs):
+    # plot training and test data ------------------------------------------
+    lg = LG[LG['w']==w];          t = lg['threshold'].mean()
+    train =lg[lg['train'] == 1];  test = lg[lg['train'] == 0]
+    ax.plot(train['x'], train['y'], 's', color='k', alpha=0.5)  # train data
+    ax.plot(test['x'], test['y'], '.', color='k')                 # test data
+    ax.set_xlim([LG['x'].min(), LG['x'].max()]);  ax.set_ylim([-0.05, 1.05])
+    # plot logit function --------------------------------------------------
+    x_l = np.linspace(LG['x'].min(), LG['x'].max(), num=1000) # parameter
+    p_l = logit(b, x_l)                 # likelihood through logit function
+    ax.plot(x_l, p_l, '--', color='k')        # plot logit
+    ax.vlines(t,-0.1, 1.1, color='gray', linestyles=':')
+    ax.set_ylabel('class at %s [Hz]'%w);  
+    ax.set_yticks([0, 0.5, 1]); ax.grid('on'); 
+  train_c = LG[LG['train'] == 1]; test_c =  LG[LG['train'] == 0]
+  y_train_p = pred(train_c['x'], train_c['threshold'])
+  y_test_p = pred(test_c['x'], test_c['threshold'])
+  fig.text(0.25, 0.9, 'train score =  %.4f\ntest score = %.4f '%( 
+    score(train_c['y'], y_train_p), 
+    score(test_c['y'], y_test_p)), fontsize=12)
+  ax.set_xlabel(feat, fontsize=12); fig.subplots_adjust(hspace=0)
+  fig.legend(['train', 'test', 'logit function'], 
+    fontsize=12, bbox_to_anchor=(0.9, 0.95), ncol=3)
+  return fig
 print('Function created  ████████████████████████████████████████████████')
 
 # %% =======================================================================
@@ -252,7 +298,7 @@ fig5, _ = pearson_bar(DF, PR, 'Ta', 'dimensionaless torque',
   end='AC-05', n=5)
 fig6, _ = pearson_bar(DF, PR, 'Ta', 'dimensionaless torque', 
   end='AC-01Y', n=5)
-stat_s = ['_'.join(f.split('_')[:-1]) for f in features];
+feat_s = ['_'.join(f.split('_')[:-1]) for f in features];
 keys_s = [f.split('_')[-1] for f in features]; 
 time_elapsed(START)             # Time elapsed in the process
 
@@ -268,47 +314,34 @@ curves = [curves[i] for i in np.argsort(Q)]
 curves.remove('s_2ph_32c_2400rpm_221m3h')
 curves = curves[:10] + ['s_2ph_32c_2400rpm_221m3h'] + curves[10:]
 # plot best features -------------------------------------------------------
-for stat, key in zip(stat_s, keys_s):
-  x = y = z =np.empty((0,));      labels = []                 # empty
+for feat, key in zip(feat_s, keys_s):
   path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   # path   
   PR = pd.DataFrame(h5todict(path_pr))                        # parameters
-  for j, curve in enumerate(curves):      # for every curve 
-    df = DF[DF['curve']==curve]           # dataframe particular
-    labels.append(label1(df['w'].mean(), df['mu'].mean(), df['Q'].mean()))
-    x = np.r_[x, PR[stat].iloc[df.index]] # parameter
-    y = np.r_[y, j*np.ones(len(df))   ]   # curves
-    z = np.r_[z, df['class']]             # classes
-  fig, ax = plt.subplots(1, 1) # plot best features ------------------------
-  colors = [(.6, .6, .6), (.5, .5, .5), (.0, .0, .0)] # colors for 
-  for i, m in enumerate(['_', 'o', 's']):   # for every class  
-    I = np.where(z==i)[0]                   # index
-    ax.plot(x[I], y[I], m, color=colors[i]) # plot 
-  ax.set_xlabel(stat);                ax.set_title(key)
-  ax.set_yticks(range(len(curves)));  ax.set_yticklabels(labels)
-  ax.legend(['transition', 'water-in-oil', 'oil-in-water'])
+  scatter(DF, PR, curves, feat, key)
 time_elapsed(START)             # Time elapsed in the process
+
 
 # %% =======================================================================
 # Logistic regression
 # ==========================================================================
 print('█████████████████████ logistic regression ████████████████████████')
-for z, key in zip(stat_s, keys_s):
+pred = lambda x, threshold: 1*(x>threshold)
+score = lambda y, y_pred: sum((y_pred==y)*1)/len(y)
+lgc = ['x', 'y', 'train', 'w', 'threshold']
+for feat, key in zip(feat_s, keys_s):
+#feat = 'fft_rms_0_2hHz'                        
 #for key in keys:
-#  z = 'fft_rms_0_2hHz'                        
+  LG = pd.DataFrame(columns=lgc); bs = []
   path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   
   PR = pd.DataFrame(h5todict(path_pr))          # PR results
-  fig, axs = plt.subplots(3, 1, sharex=True); fig.suptitle(key,x=0.2)
-  for ax, j  in zip(axs, [30, 40, 50]):
-    I = DF[np.round(DF['w']/60)==j][DF['class']!=0].index  # index
-    rng = default_rng(43)   # random number
-    n1 = rng.choice(len(I), size=int(len(I)*0.7), replace=False)  # training 
+  for w in [30, 40, 50]:
+    I = DF[np.round(DF['w']/60)==w][DF['class']!=0].index  # index
+    # initial values for logit function ------------------------------------
+    rng = default_rng(23)   # random number
+    n1 = rng.choice(len(I), size=int(len(I)*0.25), replace=False) # training 
     n2 = np.array([i for i in range(len(I)) if all(i!=n1)])     # test index
-    x = np.array(PR[z].loc[I]);           x_train = x[n1] # x train
+    x = np.abs(np.array(PR[feat].loc[I]));   x_train = x[n1] # x train
     y = 2 - np.array(DF['class'].loc[I]); y_train = y[n1] # y train
-    # plot training and test data ------------------------------------------
-    ax.plot(x_train, y_train, 's', color='k', alpha=0.5)  # train data
-    ax.plot(x[n2], y[n2], '.', color='k')                 # test data
-    ax.set_xlim([x.min(), x.max()]);  ax.set_ylim([-0.05, 1.05])
     # initial values for logit function ------------------------------------
     b = [0, 0]; b[1], b[0], _, _, _ = linregress(x_train,y_train)
     # resolve logit function -----------------------------------------------
@@ -316,14 +349,15 @@ for z, key in zip(stat_s, keys_s):
     # plot logit function --------------------------------------------------
     x_l = np.linspace(x.min(), x.max(), num=1000) # parameter
     p_l = logit(b, x_l)                 # likelihood through logit function
-    ax.plot(x_l, p_l, '--', color='k')        # plot logit
     threshold = x_l[np.where(p_l>=0.5)[0][0]] # division
-    ax.vlines(threshold,-0.1, 1.1, color='gray', linestyles=':')
-    ax.set_ylabel('class at %s [Hz]'%j);  ax.set_yticks([0, 0.5, 1])
-    ax.grid('on')
-  ax.set_xlabel(z); fig.subplots_adjust(hspace=0)
-  fig.legend(['train', 'test', 'logit function'], 
-    fontsize=12, bbox_to_anchor=(0.99, 0.995), ncol=3)
+    for n, c in zip([n1, n2], [0, 1]):
+      ln = len(n)
+      data = np.c_[x[n], y[n], ln*[c], ln*[w], ln*[threshold]]
+      lg = pd.DataFrame(data, columns=lgc)
+      LG = pd.concat([LG, lg] , axis=0, ignore_index=True)
+    bs.append(b)
+  plot_logit(LG, bs, key, feat)
+  
 time_elapsed(START)             # Time elapsed in the process
 
 
@@ -332,6 +366,7 @@ time_elapsed(START)             # Time elapsed in the process
 
 
 # %%
+
 
 
 # %%
