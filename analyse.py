@@ -106,9 +106,18 @@ def pearson_bar(DF, PR, y_i, ylabel, ini='', end='', n=15):
   ax[1].set_xlabel(ylabel); ax[1].set_ylabel(features[-1]);   # format
   return fig, features
 logit = lambda b, x : 1/ (1 + np.exp( -(b[0] + b[1]*x) ) )
+def logit1(b, x):
+  b = b.reshape(len(b), 1)
+  return 1/ (1 + np.exp( -(b[0, 0] + x @ b[1:,:]  ) ))
 def cost(b, x, y):
   '''cost function to logit regression'''
   p = logit(b, x)
+  c = - (1/len(x)) * (y*np.log(p) + (1 - y)*np.log(1 - p) )
+  i = np.where(np.isnan(c))[0]; c[i] = 1.0
+  return np.sum(c)
+def cost1(b, x, y):
+  '''cost function to logit regression'''
+  p = logit1(b, x)
   c = - (1/len(x)) * (y*np.log(p) + (1 - y)*np.log(1 - p) )
   i = np.where(np.isnan(c))[0]; c[i] = 1.0
   return np.sum(c)
@@ -157,6 +166,8 @@ def plot_logit(LG, bs, key, feat):
   fig.legend(['train', 'test', 'logit function'], 
     fontsize=12, bbox_to_anchor=(0.9, 0.95), ncol=3)
   return fig
+pred = lambda x, threshold: 1*(x>threshold)
+score = lambda y, y_pred: sum((y_pred==y)*1)/len(y)
 print('Function created  ████████████████████████████████████████████████')
 
 # %% =======================================================================
@@ -325,8 +336,6 @@ time_elapsed(START)             # Time elapsed in the process
 # Logistic regression
 # ==========================================================================
 print('█████████████████████ logistic regression ████████████████████████')
-pred = lambda x, threshold: 1*(x>threshold)
-score = lambda y, y_pred: sum((y_pred==y)*1)/len(y)
 lgc = ['x', 'y', 'train', 'w', 'threshold']
 for feat, key in zip(feat_s, keys_s):
 #feat = 'fft_rms_0_2hHz'                        
@@ -345,7 +354,9 @@ for feat, key in zip(feat_s, keys_s):
     # initial values for logit function ------------------------------------
     b = [0, 0]; b[1], b[0], _, _, _ = linregress(x_train,y_train)
     # resolve logit function -----------------------------------------------
-    b = minimize(lambda b: cost(b, x_train, y_train), b).x  # optimize
+    x_train = x_train.reshape(len(x_train), 1)
+    y_train = y_train.reshape(len(y_train), 1)
+    b = minimize(lambda b: cost1(b, x_train, y_train), b).x  # optimiz
     # plot logit function --------------------------------------------------
     x_l = np.linspace(x.min(), x.max(), num=1000) # parameter
     p_l = logit(b, x_l)                 # likelihood through logit function
@@ -357,16 +368,7 @@ for feat, key in zip(feat_s, keys_s):
       LG = pd.concat([LG, lg] , axis=0, ignore_index=True)
     bs.append(b)
   plot_logit(LG, bs, key, feat)
-  
 time_elapsed(START)             # Time elapsed in the process
-
-
-
-
-
-
-# %%
-
 
 
 # %%

@@ -643,3 +643,4 @@ def impurity(x, y, threshold, weighted=False):
   w = np.sum(mj)/(len(mj)*mj) if weighted==True else np.ones(len(c)) #weights
   left = np.where(x<=threshold)[0];   right = np.where(x>threshold)[0]
   return np.sum([len(i) /len(y)*gini(y[i], c, w) for i in [left, right]])
+
