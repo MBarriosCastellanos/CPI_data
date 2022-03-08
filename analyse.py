@@ -104,18 +104,12 @@ def pearson_bar(DF, PR, y_i, ylabel, ini='', end='', n=15):
   # get Data Frame ---------------------------------------------------------
   ax[1].plot(y, X[features[-1]], '.', color='k')  # plot best feature
   ax[1].set_xlabel(ylabel); ax[1].set_ylabel(features[-1]);   # format
-  return fig, features
+  return fig, list(features), list(values)
 logit = lambda b, x : 1/ (1 + np.exp( -(b[0] + b[1]*x) ) )
 def logit1(b, x):
   b = b.reshape(len(b), 1)
   return 1/ (1 + np.exp( -(b[0, 0] + x @ b[1:,:]  ) ))
 def cost(b, x, y):
-  '''cost function to logit regression'''
-  p = logit(b, x)
-  c = - (1/len(x)) * (y*np.log(p) + (1 - y)*np.log(1 - p) )
-  i = np.where(np.isnan(c))[0]; c[i] = 1.0
-  return np.sum(c)
-def cost1(b, x, y):
   '''cost function to logit regression'''
   p = logit1(b, x)
   c = - (1/len(x)) * (y*np.log(p) + (1 - y)*np.log(1 - p) )
@@ -139,14 +133,15 @@ def scatter(DF, PR, curves, pr_i, key):
   ax.set_yticks(range(len(curves)));  ax.set_yticklabels(labels)
   ax.legend(['transition', 'water-in-oil', 'oil-in-water'])
   return fig
-def plot_logit(LG, bs, key, feat):
+def plot_logit(LG, bs, key, feature):
   fig, axs = plt.subplots(3, 1, sharex=True);
   fig.suptitle(key,x=0.2, y=0.93, fontsize=14)
   for ax, w, b, in zip(axs, [30, 40, 50], bs):
     # plot training and test data ------------------------------------------
     lg = LG[LG['w']==w];          t = lg['threshold'].mean()
     train =lg[lg['train'] == 1];  test = lg[lg['train'] == 0]
-    ax.plot(test['x'], test['y'], 's', color='k', alpha=0.5)  # test data
+    ax.plot(test['x'], test['y'], 's', color='k', 
+      markersize=7, alpha=0.5)  # test data
     ax.plot(train['x'], train['y'], '.', color='k')           # train data
     ax.set_xlim([LG['x'].min(), LG['x'].max()]);  ax.set_ylim([-0.05, 1.05])
     # plot logit function --------------------------------------------------
@@ -162,7 +157,7 @@ def plot_logit(LG, bs, key, feat):
   fig.text(0.25, 0.9, 'train score =  %.4f\ntest score = %.4f '%( 
     score(train_c['y'], y_train_p), 
     score(test_c['y'], y_test_p)), fontsize=12)
-  ax.set_xlabel(feat, fontsize=12); fig.subplots_adjust(hspace=0)
+  ax.set_xlabel(feature, fontsize=12); fig.subplots_adjust(hspace=0)
   fig.legend(['train', 'test', 'logit function'], 
     fontsize=12, bbox_to_anchor=(0.9, 0.95), ncol=3)
   return fig
@@ -204,7 +199,6 @@ time_elapsed(START)                           # Time elapsed in the process
 # Initial Curves
 # ==========================================================================
 print('█████████████████████ wc vs h, and wc vs Ta ██████████████████████')
-
 curves_sel = [curves[i] for i in [9, 2, 6, 5]]
 # Curve  of h vs wc --------------------------------------------------------
 plot1(curves_sel, DF, loc='upper left');  plt.ylim([2,12]); plt.show()   
@@ -229,10 +223,10 @@ bounds = Bounds([a[0], a[1]*0.8, 0.05,  0], # optimization bound
 a = minimize(lambda a: sum((sigmoid(a,wc)-h)**2), a, bounds=bounds).x
 x = np.linspace(0, 100, num=10001)          # water cut possibles
 dy_max = dsigmoid(a, a[3])  # derivate of sigmid function in wc
-limit = np.where(dsigmoid(a, x)>dy_max*0.2)[0] # transition region
-l1 = np.where(wc<x[ limit[ 0] ])[0][-1]# begin trans
-l2 = np.where(wc>x[ limit[-1] ])[0][ 0]# end   trans
-plot_sigmoid(x, a, wc, h, l1, l2, a[3])
+limit = np.where(dsigmoid(a, x)>dy_max*0.2)[0]  # transition region
+l1 = np.where(wc<x[ limit[ 0] ])[0][-1]         # begin trans
+l2 = np.where(wc>x[ limit[-1] ])[0][ 0]         # end   trans
+plot_sigmoid(x, a, wc, h, l1, l2, a[3]) 
 plt.title(label1(df['w'].mean(), df['mu'].mean(), df['Q'].mean()))
 time_elapsed(START)             # Time elapsed in the process
 
@@ -267,51 +261,44 @@ fig2 = scatter3d(x, y, np.dstack((z[:,:, :3], z[:,:, 7:])),
 #tikz_save('images/' + key + '.tex')
 time_elapsed(START)             # Time elapsed in the process
 
-
-
 # %% =======================================================================
 # Spectrum fft analysis
 # ==========================================================================
 print('████████ Analysis of spectrum changes in phase inversion █████████')
 print('the selected curve is ███ %s ███'%(curve))
-for j, key in enumerate(keys):
-  #if key == 'AC-05' or key=='AC-01Z': 
-  n = np.where(signal.f>=750)[0][0]
-  fig1 = spectrum(signal.f, vib_arr, df, [15, 30, 50, 57], j, n, keys)
-  n1 = np.where(signal.f>=1000)[0][0];    n2 = np.where(signal.f>=5000)[0][0]  
-  fig2 = spectrum(signal.f, vib_arr, df, [15, 30, 50, 57], j, n2, keys, n1=n1)
+index = [15, 30, 50, 57];
+[n, n1, n2] = [np.where(signal.f>=i)[0][0] for i in [750, 1000, 5000]]
+for j, key in enumerate(keys): # AC-05 AC-01Z
+  fig1 = spectrum(signal.f, vib_arr, df, index, j, n, keys)
+  fig2 = spectrum(signal.f, vib_arr, df, index, j, n2, keys, n1=n1)
 time_elapsed(START)             # Time elapsed in the process
-
 
 # %% =======================================================================
 # Parameter Results
 # ==========================================================================
-print('███████ Join statistics results for all data and analysis ████████')
-key = keys[3];  
+print('███████ Join statistics results for all data and analysis ████████') 
 for key in keys:
   path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   
-  PR_i = pd.DataFrame(h5todict(path_pr))          # PR results
-  PR_i = PR_i[columns]
-  PR_i.columns =[ i + '_' + key for i in PR_i.columns]
+  PR_i = pd.DataFrame(h5todict(path_pr))    # PR results
+  PR_i = PR_i[columns]                      # filter by columns
+  PR_i.columns =[ i + '_' + key for i in PR_i.columns] # add key name
   PR = PR_i if key== keys[0] else pd.concat([PR , PR_i], axis=1) 
 time_elapsed(START)             # Time elapsed in the process
-
-# %% =======================================================================
-# Results dataframe
-# ==========================================================================
+# Results dataframe --------------------------------------------------------
 print('████ feature selection through pearson correlation analysis ██████')
-fig1, features = pearson_bar(DF, PR, 'Ta', 'dimensionaless torque')
-fig2, _ = pearson_bar(DF, PR, 'wc', 'water cut')
-fig3, _ = pearson_bar(DF, PR, 'dp', '$\Delta p$ [bar]')
-fig4, _ = pearson_bar(DF, PR, 'Ta', 'dimensionaless torque', 
-  ini='fft_rms', n=5)
-fig5, _ = pearson_bar(DF, PR, 'Ta', 'dimensionaless torque', 
-  end='AC-05', n=5)
-fig6, _ = pearson_bar(DF, PR, 'Ta', 'dimensionaless torque', 
-  end='AC-01Y', n=5)
-feat_s = ['_'.join(f.split('_')[:-1]) for f in features];
-keys_s = [f.split('_')[-1] for f in features]; 
+#fig1, _, _ = pearson_bar(DF, PR, 'wc', 'water cut')
+#fig2, _, _ = pearson_bar(DF, PR, 'dp', '$\Delta p$ [bar]')
+FT = pd.DataFrame(columns=keys, index=range(4)) # Resume r value for keys
+for key in keys:
+  _ , f, v = pearson_bar(DF, PR, 'Ta', '',  end=key, n=4); plt.close();   
+  f = [i[:-len(key) - 1] for i in f]      # features and values
+  FT.index = f if key == keys[0] else FT.index; FT.loc[f, key] = v
+fig3, features, _ = pearson_bar(DF, PR,   # figure of person parameters
+  'Ta', 'dimensionaless torque', ini='fft_rms', n=10)
+F = ['_'.join(f.split('_')[:-1]) for f in features] # Features to analyse
+K = [f.split('_')[-1] for f in features]            # Keys to analyse
 time_elapsed(START)             # Time elapsed in the process
+FT
 
 # %% =======================================================================
 # Evaluate features
@@ -325,21 +312,19 @@ curves = [curves[i] for i in np.argsort(Q)]
 curves.remove('s_2ph_32c_2400rpm_221m3h')
 curves = curves[:10] + ['s_2ph_32c_2400rpm_221m3h'] + curves[10:]
 # plot best features -------------------------------------------------------
-for feat, key in zip(feat_s, keys_s):
+for feature, key in zip(F, K):
   path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   # path   
   PR = pd.DataFrame(h5todict(path_pr))                        # parameters
-  scatter(DF, PR, curves, feat, key)
+  scatter(DF, PR, curves, feature, key)
 time_elapsed(START)             # Time elapsed in the process
 
 
 # %% =======================================================================
 # Logistic regression one dimension
 # ==========================================================================
-print('█████████████████████ logistic regression ████████████████████████')
+print('██████████████ logistic regression one dimension █████████████████')
 lgc = ['x', 'y', 'train', 'w', 'threshold']
-for feat, key in zip(feat_s, keys_s):
-#feat = 'fft_rms_0_2hHz'                        
-#for key in keys:
+for feature, key in zip(F, K):
   LG = pd.DataFrame(columns=lgc); bs = []
   path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   
   PR = pd.DataFrame(h5todict(path_pr))          # PR results
@@ -349,14 +334,14 @@ for feat, key in zip(feat_s, keys_s):
     rng = default_rng(23)   # random number
     n1 = rng.choice(len(I), size=int(len(I)*0.25), replace=False) # training 
     n2 = np.array([i for i in range(len(I)) if all(i!=n1)])     # test index
-    x = np.abs(np.array(PR[feat].loc[I]));   x_train = x[n1] # x train
+    x = np.abs(np.array(PR[feature].loc[I]));   x_train = x[n1] # x train
     y = 2 - np.array(DF['class'].loc[I]); y_train = y[n1] # y train
     # initial values for logit function ------------------------------------
     b = [0, 0]; b[1], b[0], _, _, _ = linregress(x_train,y_train)
     # resolve logit function -----------------------------------------------
     x_train = x_train.reshape(len(x_train), 1)
     y_train = y_train.reshape(len(y_train), 1)
-    b = minimize(lambda b: cost1(b, x_train, y_train), b).x  # optimize
+    b = minimize(lambda b: cost(b, x_train, y_train), b).x  # optimize
     # plot logit function --------------------------------------------------
     x_l = np.linspace(x.min(), x.max(), num=1000) # parameter
     p_l = logit(b, x_l)                 # likelihood through logit function
@@ -367,7 +352,7 @@ for feat, key in zip(feat_s, keys_s):
       lg = pd.DataFrame(data, columns=lgc)
       LG = pd.concat([LG, lg] , axis=0, ignore_index=True)
     bs.append(b)
-  plot_logit(LG, bs, key, feat)
+  plot_logit(LG, bs, key, feature)
 time_elapsed(START)             # Time elapsed in the process
 
 
@@ -376,38 +361,37 @@ time_elapsed(START)             # Time elapsed in the process
 # ==========================================================================
 print('█████████████████████ logistic regression ████████████████████████')
 lgc = ['x', 'y', 'train', 'w', 'threshold']
-for feat, key in zip(feat_s, keys_s):
-#feat = 'fft_rms_0_2hHz'                        
-#for key in keys:
+for feature, key in zip(F, K):
   LG = pd.DataFrame(columns=lgc); bs = []
   path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   
   PR = pd.DataFrame(h5todict(path_pr))          # PR results
   I = DF[DF['class']!=0].index; df = DF.loc[I]; li = len(I)
   # initial values for logit function ------------------------------------
   rng = default_rng(23)   # random number
-  n1 = rng.choice(li, size=int(li*0.25), replace=False) # training 
+  n1 = rng.choice(li, size=int(li*0.25), replace=False)   # training 
   n2 = np.array([i for i in range(li) if all(i!=n1)])     # test index
-  x = np.c_[np.abs(PR[feat].loc[I]) , DF["w"].loc[I]/60]
+  x = np.c_[np.abs(PR[feature].loc[I]) , DF["w"].loc[I]/60]
   y = 2 - np.array(DF['class'].loc[I]); 
   x_train = x[n1];      y_train = y[n1] # y train
   # initial values for logit function ------------------------------------
   b = [0, 0, 0]; b[1], b[0], _, _, _ = linregress(x_train[:,1], y_train)
   # resolve logit function -----------------------------------------------
   y_train = y_train.reshape(len(y_train), 1)
-  b = minimize(lambda b: cost1(b, x_train, y_train), b).x  # optimize
+  b = minimize(lambda b: cost(b, x_train, y_train), b).x  # optimize
   # plot logit function --------------------------------------------------
   x_l = np.linspace(x[:,0].min(), x[:,0].max(), num=1000) # parameter
+  for n, c in zip([n1, n2], [0, 1]):
+    ln = len(n)
+    data = np.c_[x[n,0], y[n], ln*[c], np.round(x[n,1]), ln*[0]]
+    lg = pd.DataFrame(data, columns=lgc)
+    LG = pd.concat([LG, lg] , axis=0, ignore_index=True)
   for w in [30, 40, 50]:
-    X_l = np.c_[x_l,  np.ones(1000)*w]
-    p_l = logit1(b, X_l)               # likelihood through logit function
+    b1 =  np.array([b[0] + b[2]*w, b[1]])
+    p_l = logit(b1, x_l)               # likelihood through logit function
     threshold = x_l[np.where(p_l>=0.5)[0][0]] # division
-    for n, c in zip([n1, n2], [0, 1]):
-      ln = len(n)
-      data = np.c_[x[n,0], y[n], ln*[c], ln*[w], ln*[threshold]]
-      lg = pd.DataFrame(data, columns=lgc)
-      LG = pd.concat([LG, lg] , axis=0, ignore_index=True)
-    bs.append(b)
-  #plot_logit(LG, bs, key, feat)
+    LG['threshold'] = (LG["w"]==w)*threshold + LG['threshold'] 
+    bs.append(b1)
+  plot_logit(LG, bs, key, feature)
 time_elapsed(START)             # Time elapsed in the process
 
 # %%
