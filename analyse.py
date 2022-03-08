@@ -146,8 +146,8 @@ def plot_logit(LG, bs, key, feat):
     # plot training and test data ------------------------------------------
     lg = LG[LG['w']==w];          t = lg['threshold'].mean()
     train =lg[lg['train'] == 1];  test = lg[lg['train'] == 0]
-    ax.plot(train['x'], train['y'], 's', color='k', alpha=0.5)  # train data
-    ax.plot(test['x'], test['y'], '.', color='k')                 # test data
+    ax.plot(test['x'], test['y'], 's', color='k', alpha=0.5)  # test data
+    ax.plot(train['x'], train['y'], '.', color='k')           # train data
     ax.set_xlim([LG['x'].min(), LG['x'].max()]);  ax.set_ylim([-0.05, 1.05])
     # plot logit function --------------------------------------------------
     x_l = np.linspace(LG['x'].min(), LG['x'].max(), num=1000) # parameter
@@ -333,7 +333,7 @@ time_elapsed(START)             # Time elapsed in the process
 
 
 # %% =======================================================================
-# Logistic regression
+# Logistic regression one dimension
 # ==========================================================================
 print('█████████████████████ logistic regression ████████████████████████')
 lgc = ['x', 'y', 'train', 'w', 'threshold']
@@ -356,7 +356,7 @@ for feat, key in zip(feat_s, keys_s):
     # resolve logit function -----------------------------------------------
     x_train = x_train.reshape(len(x_train), 1)
     y_train = y_train.reshape(len(y_train), 1)
-    b = minimize(lambda b: cost1(b, x_train, y_train), b).x  # optimiz
+    b = minimize(lambda b: cost1(b, x_train, y_train), b).x  # optimize
     # plot logit function --------------------------------------------------
     x_l = np.linspace(x.min(), x.max(), num=1000) # parameter
     p_l = logit(b, x_l)                 # likelihood through logit function
@@ -370,5 +370,44 @@ for feat, key in zip(feat_s, keys_s):
   plot_logit(LG, bs, key, feat)
 time_elapsed(START)             # Time elapsed in the process
 
+
+# %% =======================================================================
+# Logistic regression two dimension
+# ==========================================================================
+print('█████████████████████ logistic regression ████████████████████████')
+lgc = ['x', 'y', 'train', 'w', 'threshold']
+for feat, key in zip(feat_s, keys_s):
+#feat = 'fft_rms_0_2hHz'                        
+#for key in keys:
+  LG = pd.DataFrame(columns=lgc); bs = []
+  path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   
+  PR = pd.DataFrame(h5todict(path_pr))          # PR results
+  I = DF[DF['class']!=0].index; df = DF.loc[I]; li = len(I)
+  # initial values for logit function ------------------------------------
+  rng = default_rng(23)   # random number
+  n1 = rng.choice(li, size=int(li*0.25), replace=False) # training 
+  n2 = np.array([i for i in range(li) if all(i!=n1)])     # test index
+  x = np.c_[np.abs(PR[feat].loc[I]) , DF["w"].loc[I]/60]
+  y = 2 - np.array(DF['class'].loc[I]); 
+  x_train = x[n1];      y_train = y[n1] # y train
+  # initial values for logit function ------------------------------------
+  b = [0, 0, 0]; b[1], b[0], _, _, _ = linregress(x_train[:,1], y_train)
+  # resolve logit function -----------------------------------------------
+  y_train = y_train.reshape(len(y_train), 1)
+  b = minimize(lambda b: cost1(b, x_train, y_train), b).x  # optimize
+  # plot logit function --------------------------------------------------
+  x_l = np.linspace(x[:,0].min(), x[:,0].max(), num=1000) # parameter
+  for w in [30, 40, 50]:
+    X_l = np.c_[x_l,  np.ones(1000)*w]
+    p_l = logit1(b, X_l)               # likelihood through logit function
+    threshold = x_l[np.where(p_l>=0.5)[0][0]] # division
+    for n, c in zip([n1, n2], [0, 1]):
+      ln = len(n)
+      data = np.c_[x[n,0], y[n], ln*[c], ln*[w], ln*[threshold]]
+      lg = pd.DataFrame(data, columns=lgc)
+      LG = pd.concat([LG, lg] , axis=0, ignore_index=True)
+    bs.append(b)
+  #plot_logit(LG, bs, key, feat)
+time_elapsed(START)             # Time elapsed in the process
 
 # %%
