@@ -1,6 +1,7 @@
 # %% =======================================================================
 # Import dict
 # ==========================================================================
+from turtle import color
 from silx.io.dictdump import h5todict, dicttoh5 # import, export h5 files
 import numpy as np                              # mathematics
 import pandas as pd                             # mathematics\
@@ -105,13 +106,12 @@ def pearson_bar(DF, PR, y_i, ylabel, ini='', end='', n=15):
   ax[1].plot(y, X[features[-1]], '.', color='k')  # plot best feature
   ax[1].set_xlabel(ylabel); ax[1].set_ylabel(features[-1]);   # format
   return fig, list(features), list(values)
-logit = lambda b, x : 1/ (1 + np.exp( -(b[0] + b[1]*x) ) )
-def logit1(b, x):
+def logit(b, x):
   b = b.reshape(len(b), 1)
   return 1/ (1 + np.exp( -(b[0, 0] + x @ b[1:,:]  ) ))
 def cost(b, x, y):
   '''cost function to logit regression'''
-  p = logit1(b, x)
+  p = logit(b, x)
   c = - (1/len(x)) * (y*np.log(p) + (1 - y)*np.log(1 - p) )
   i = np.where(np.isnan(c))[0]; c[i] = 1.0
   return np.sum(c)
@@ -129,48 +129,56 @@ def scatter(DF, PR, curves, pr_i, key):
   for i, m in enumerate(['_', 'o', 's']):   # for every class  
     I = np.where(z==i)[0]                   # index
     ax.plot(x[I], y[I], m, color=colors[i]) # plot 
+  lb, ub = PR[pr_i].min(), PR[pr_i].max(); ax.set_xlim(lb, ub)
+  ax.hlines([9.5, 13.5], lb, ub, color=(.0,.0,.0), linewidth=0.3)
   ax.set_xlabel(pr_i);                ax.set_title(key)
   ax.set_yticks(range(len(curves)));  ax.set_yticklabels(labels)
   ax.legend(['transition', 'water-in-oil', 'oil-in-water'])
   return fig
-def plot_logit(LG, bs, key, feature):
+def plot_logit(LG, bs, key, feature, scores):
   fig, axs = plt.subplots(3, 1, sharex=True);
   fig.suptitle(key,x=0.2, y=0.93, fontsize=14)
   for ax, w, b, in zip(axs, [30, 40, 50], bs):
     # plot training and test data ------------------------------------------
-    lg = LG[LG['w']==w];          t = lg['threshold'].mean()
+    lg = LG[np.round(LG['w'])==w];        t = lg['threshold'].mean()
     train =lg[lg['train'] == 1];  test = lg[lg['train'] == 0]
-    ax.plot(test['x'], test['y'], 's', color='k', 
+    ax.plot(test['x'], test['y'], 'o', color='gray', 
       markersize=7, alpha=0.5)  # test data
-    ax.plot(train['x'], train['y'], '.', color='k')           # train data
+    ax.plot(train['x'], train['y'], 'x', color='k', markersize=10,
+      markeredgewidth=2)  
     ax.set_xlim([LG['x'].min(), LG['x'].max()]);  ax.set_ylim([-0.05, 1.05])
     # plot logit function --------------------------------------------------
     x_l = np.linspace(LG['x'].min(), LG['x'].max(), num=1000) # parameter
-    p_l = logit(b, x_l)                 # likelihood through logit function
+    p_l = logit(b, np.array([x_l]).T)                 # likelihood through logit function
     ax.plot(x_l, p_l, '--', color='k')        # plot logit
     ax.vlines(t,-0.1, 1.1, color='gray', linestyles=':')
     ax.set_ylabel('class at %s [Hz]'%w);  
     ax.set_yticks([0, 0.5, 1]); ax.grid('on'); 
-  train_c = LG[LG['train'] == 1]; test_c =  LG[LG['train'] == 0]
-  y_train_p = pred(train_c['x'], train_c['threshold'])
-  y_test_p = pred(test_c['x'], test_c['threshold'])
   fig.text(0.25, 0.9, 'train score =  %.4f\ntest score = %.4f '%( 
-    score(train_c['y'], y_train_p), 
-    score(test_c['y'], y_test_p)), fontsize=12)
+    scores[1], scores[0]), fontsize=12)
   ax.set_xlabel(feature, fontsize=12); fig.subplots_adjust(hspace=0)
-  fig.legend(['train', 'test', 'logit function'], 
+  fig.legend(['test', 'train', 'logit function'], 
     fontsize=12, bbox_to_anchor=(0.9, 0.95), ncol=3)
   return fig
 pred = lambda x, threshold: 1*(x>threshold)
 score = lambda y, y_pred: sum((y_pred==y)*1)/len(y)
+def train_test(size, train_percentage, random_number=23):
+  rng = default_rng(random_number)   # random number
+  n_train = rng.choice(
+    size, size=int(size*train_percentage/100), replace=False)     
+  n_test = np.array([i for i in range(size) if all(i!=n_train)])
+  return n_train, n_test
+def threshold(x, b):
+  x_l = np.linspace(x[:,0].min(), x[:,0].max(), num=10000) # parameter
+  p_l = logit(b, np.array([x_l]).T) # likelihood through logit function
+  return x_l[np.where(p_l>=0.5)[0][0]] # division
+
 print('Function created  ████████████████████████████████████████████████')
 
 # %% =======================================================================
 # Get Data of DF and analysis data
 # ==========================================================================
-print('██████████████████████████████ Curves █████████████████████████████')
-curves = [i[5:-3] for i in glob.glob('data/s*')]; enum_vec(curves) 
-print('███████████████████████████████ Keys ██████████████████████████████')
+print('██████████████████████████████ Keys ██████████████████████████████')
 keys = [i[5:-3] for i in glob.glob('data/AC*')];  enum_vec(keys) 
 # DF_PR signals ------------------------------------------------------------
 print('██████████████████████████████ Signals ████████████████████████████')
@@ -192,6 +200,13 @@ norms = ['x', 'log'];   enum_vec(norms)
 norm = norms[1]; print('the normalization key is ███ %s ███'%(norm))
 # --------------------------------------------------------------------------
 DF = pd.DataFrame(h5todict('data/DF.h5'))
+# sort curves by rpm, flow -------------------------------------------------
+print('██████████████████████████████ Curves █████████████████████████████')
+curves = list(DF['curve'].unique());  Q = []; curve_a = curves[5]
+for curve in curves:
+  df = DF[DF['curve']==curve]; Q.append(df['Q'].mean())
+curves = [curves[i] for i in np.argsort(Q)];  curves.remove(curve_a)
+curves = curves[:10] + [curve_a] + curves[10:]; enum_vec(curves)
 print('Analyses data defined...')
 time_elapsed(START)                           # Time elapsed in the process
 
@@ -199,7 +214,7 @@ time_elapsed(START)                           # Time elapsed in the process
 # Initial Curves
 # ==========================================================================
 print('█████████████████████ wc vs h, and wc vs Ta ██████████████████████')
-curves_sel = [curves[i] for i in [9, 2, 6, 5]]
+curves_sel = [curves[i] for i in [16, 11, 12, 6]]
 # Curve  of h vs wc --------------------------------------------------------
 plot1(curves_sel, DF, loc='upper left');  plt.ylim([2,12]); plt.show()   
 # Curve  of Ta vs wc -------------------------------------------------------
@@ -212,7 +227,7 @@ time_elapsed(START)             # Time elapsed in the process
 # ==========================================================================
 # Getting  bound between water-in-oil & transition & oil-in-water ----------
 print('███████████████████ Genering sigmoid function ████████████████████')
-df = DF[DF['curve']==curves[6]] # dataframe for only this curve
+df = DF[DF['curve']==curves[12]] # dataframe for only this curve
 wc = np.array( df['wc']);                   # watercut [%]
 h = np.array(df['dp']*1e5/(df['rho']*9.81*7)) # pressure head [m]
 # parameter sigmoid function  a0 = h_max, a1 = h_max - h_min, a2 = slope
@@ -235,9 +250,8 @@ time_elapsed(START)             # Time elapsed in the process
 # Get Data of DF and analysis data for all vibration analysis
 # ==========================================================================
 print('█████████ Getting data of one curve for sensor analysis ██████████')
-curve = curves[13];  print('the selected curve is ███ %s ███'%(curve))
+curve = curves[2];  print('the selected curve is ███ %s ███'%(curve))
 df = DF[DF['curve']==curve]       # dataframe for the corresponding curve
-print( label1(df['w'].mean(), df['mu'].mean(), df['Q'].mean())) # data
 [i1, i2] = [np.where(df.index==df[i])[0][0] for i in ['i1', 'i2']]  #
 t = h5todict('data/t.h5')['t']    # time vector 
 vib = h5todict('data/' + curve + '.h5')  # vib dictionary in time
@@ -268,9 +282,10 @@ print('████████ Analysis of spectrum changes in phase inversion 
 print('the selected curve is ███ %s ███'%(curve))
 index = [15, 30, 50, 57];
 [n, n1, n2] = [np.where(signal.f>=i)[0][0] for i in [750, 1000, 5000]]
-for j, key in enumerate(keys): # AC-05 AC-01Z
-  fig1 = spectrum(signal.f, vib_arr, df, index, j, n, keys)
-  fig2 = spectrum(signal.f, vib_arr, df, index, j, n2, keys, n1=n1)
+for j, key in enumerate(keys):                # AC-05 AC-01Z
+  if key == 'AC-05' or key == 'AC-01Z':       # 
+    fig1 = spectrum(signal.f, vib_arr, df, index, j, n, keys)
+    fig2 = spectrum(signal.f, vib_arr, df, index, j, n2, keys, n1=n1)
 time_elapsed(START)             # Time elapsed in the process
 
 # %% =======================================================================
@@ -285,113 +300,69 @@ for key in keys:
   PR = PR_i if key== keys[0] else pd.concat([PR , PR_i], axis=1) 
 time_elapsed(START)             # Time elapsed in the process
 # Results dataframe --------------------------------------------------------
-print('████ feature selection through pearson correlation analysis ██████')
+print('████ feature selection through pearson correlation analysis █████')
 #fig1, _, _ = pearson_bar(DF, PR, 'wc', 'water cut')
 #fig2, _, _ = pearson_bar(DF, PR, 'dp', '$\Delta p$ [bar]')
 FT = pd.DataFrame(columns=keys, index=range(4)) # Resume r value for keys
 for key in keys:
-  _ , f, v = pearson_bar(DF, PR, 'Ta', '',  end=key, n=4); plt.close();   
+  _ , f, v = pearson_bar(DF, PR, 'Ta', '',  end=key, n=4); plt.close(); 
   f = [i[:-len(key) - 1] for i in f]      # features and values
   FT.index = f if key == keys[0] else FT.index; FT.loc[f, key] = v
 fig3, features, _ = pearson_bar(DF, PR,   # figure of person parameters
-  'Ta', 'dimensionaless torque', ini='fft_rms', n=10)
+  'Ta', 'dimensionaless torque', ini='fft_rms', n=9)
 F = ['_'.join(f.split('_')[:-1]) for f in features] # Features to analyse
 K = [f.split('_')[-1] for f in features]            # Keys to analyse
-time_elapsed(START)             # Time elapsed in the process
-FT
+time_elapsed(START)                       # Time elapsed in the process
+FT = FT.sort_values("AC-06Y", axis=0, ascending=False); FT
 
 # %% =======================================================================
-# Evaluate features
+# compare features behavior
 # ==========================================================================
-print('██████████████ feature comparison and evaluation █████████████████')
-# sort curves by rpm, flow -------------------------------------------------
-curves = list(DF['curve'].unique());  Q = []
-for curve in curves:
-  df = DF[DF['curve']==curve]; Q.append(df['Q'].mean())
-curves = [curves[i] for i in np.argsort(Q)]
-curves.remove('s_2ph_32c_2400rpm_221m3h')
-curves = curves[:10] + ['s_2ph_32c_2400rpm_221m3h'] + curves[10:]
+print('██████████████████ feature behavior comparison ███████████████████')
 # plot best features -------------------------------------------------------
-for feature, key in zip(F, K):
+for feature, key in zip(F[-2:], K[-2:]):    # evaluate the two best features
   path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   # path   
   PR = pd.DataFrame(h5todict(path_pr))                        # parameters
-  scatter(DF, PR, curves, feature, key)
+  scatter(DF, PR, curves, feature, key)     # plot simple comparison
 time_elapsed(START)             # Time elapsed in the process
-
-
-# %% =======================================================================
-# Logistic regression one dimension
-# ==========================================================================
-print('██████████████ logistic regression one dimension █████████████████')
-lgc = ['x', 'y', 'train', 'w', 'threshold']
-for feature, key in zip(F, K):
-  LG = pd.DataFrame(columns=lgc); bs = []
-  path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   
-  PR = pd.DataFrame(h5todict(path_pr))          # PR results
-  for w in [30, 40, 50]:
-    I = DF[np.round(DF['w']/60)==w][DF['class']!=0].index  # index
-    # initial values for logit function ------------------------------------
-    rng = default_rng(23)   # random number
-    n1 = rng.choice(len(I), size=int(len(I)*0.25), replace=False) # training 
-    n2 = np.array([i for i in range(len(I)) if all(i!=n1)])     # test index
-    x = np.abs(np.array(PR[feature].loc[I]));   x_train = x[n1] # x train
-    y = 2 - np.array(DF['class'].loc[I]); y_train = y[n1] # y train
-    # initial values for logit function ------------------------------------
-    b = [0, 0]; b[1], b[0], _, _, _ = linregress(x_train,y_train)
-    # resolve logit function -----------------------------------------------
-    x_train = x_train.reshape(len(x_train), 1)
-    y_train = y_train.reshape(len(y_train), 1)
-    b = minimize(lambda b: cost(b, x_train, y_train), b).x  # optimize
-    # plot logit function --------------------------------------------------
-    x_l = np.linspace(x.min(), x.max(), num=1000) # parameter
-    p_l = logit(b, x_l)                 # likelihood through logit function
-    threshold = x_l[np.where(p_l>=0.5)[0][0]] # division
-    for n, c in zip([n1, n2], [0, 1]):
-      ln = len(n)
-      data = np.c_[x[n], y[n], ln*[c], ln*[w], ln*[threshold]]
-      lg = pd.DataFrame(data, columns=lgc)
-      LG = pd.concat([LG, lg] , axis=0, ignore_index=True)
-    bs.append(b)
-  plot_logit(LG, bs, key, feature)
-time_elapsed(START)             # Time elapsed in the process
-
 
 # %% =======================================================================
 # Logistic regression two dimension
 # ==========================================================================
 print('█████████████████████ logistic regression ████████████████████████')
-lgc = ['x', 'y', 'train', 'w', 'threshold']
-for feature, key in zip(F, K):
-  LG = pd.DataFrame(columns=lgc); bs = []
-  path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   
-  PR = pd.DataFrame(h5todict(path_pr))          # PR results
-  I = DF[DF['class']!=0].index; df = DF.loc[I]; li = len(I)
-  # initial values for logit function ------------------------------------
-  rng = default_rng(23)   # random number
-  n1 = rng.choice(li, size=int(li*0.25), replace=False)   # training 
-  n2 = np.array([i for i in range(li) if all(i!=n1)])     # test index
-  x = np.c_[np.abs(PR[feature].loc[I]) , DF["w"].loc[I]/60]
-  y = 2 - np.array(DF['class'].loc[I]); 
-  x_train = x[n1];      y_train = y[n1] # y train
-  # initial values for logit function ------------------------------------
-  b = [0, 0, 0]; b[1], b[0], _, _, _ = linregress(x_train[:,1], y_train)
+I = DF[DF['class']!=0].index; m = len(I) # filter class 1 and 2
+train, test = train_test(m, 10)   # get aleatory train division of 10%
+y = 2 - np.array(DF['class'].loc[I]); y = y.reshape(m, 1)   # y
+ws = [30, 40, 50]                 # angular velocities in Hz
+FT = pd.DataFrame(index=["test score", "train score"]) # Result dataframe
+feature = F[0]; bds = {}          # 'fft_rms_0_2hHz' , boundaries
+for key in keys:                  # Evaluate all sensors
+  PR = pd.DataFrame(h5todict('results/' + key + '_' + norm + '.h5'))    
+  X = np.c_[np.abs(PR[feature].loc[I]) , DF['w'].loc[I]/60] # X = [f, w]  
   # resolve logit function -----------------------------------------------
-  y_train = y_train.reshape(len(y_train), 1)
-  b = minimize(lambda b: cost(b, x_train, y_train), b).x  # optimize
+  opt = minimize(lambda b: cost(b, X[train], y[train]), [0,0,0])# optimize 
+  b = opt.x       # predicted constants of logit function
+  bs = [np.array([b[0] + b[2]*w, b[1]]) for w in ws]  # adjust to one dim
+  ts = [threshold(X, b) for b in bs]  # predicted threshold boundaries
+  bds[key] = ts
+  split = np.zeros(m);  split[train] = 1  # data is for train=1 or test=0
+  bounds = np.sum([(np.round(X[:,1])==w)*t for w, t in zip(ws, ts)], axis=0)
   # plot logit function --------------------------------------------------
-  x_l = np.linspace(x[:,0].min(), x[:,0].max(), num=1000) # parameter
-  for n, c in zip([n1, n2], [0, 1]):
-    ln = len(n)
-    data = np.c_[x[n,0], y[n], ln*[c], np.round(x[n,1]), ln*[0]]
-    lg = pd.DataFrame(data, columns=lgc)
-    LG = pd.concat([LG, lg] , axis=0, ignore_index=True)
-  for w in [30, 40, 50]:
-    b1 =  np.array([b[0] + b[2]*w, b[1]])
-    p_l = logit(b1, x_l)               # likelihood through logit function
-    threshold = x_l[np.where(p_l>=0.5)[0][0]] # division
-    LG['threshold'] = (LG["w"]==w)*threshold + LG['threshold'] 
-    bs.append(b1)
-  plot_logit(LG, bs, key, feature)
-time_elapsed(START)             # Time elapsed in the process
+  LG = pd.DataFrame(np.c_[X, y[:,0], split, bounds], # Logistic Regresion
+    columns= ['x', 'w', 'y', 'train','threshold'])
+  FT[key] = [score(y[n,0], pred(X[n, 0], bounds[n])) for n in [test, train]]
+  if any(key == np.array(["AC-01Y", "AC-04", "AC-06Y"])):
+    plot_logit(LG, bs, key, feature, FT[key])
+time_elapsed(START);             # Time elapsed in the process
+FT.sort_values("test score", axis=1, ascending=False)
+
+
+# %%
+styles = ["o--", "d--", "s--", "x-", "+-", "_-", "|--", "o:", "d:", "s:"]
+colors = [(.5,.5,.5), (0,0,0)]
+for i, key in enumerate(bds):
+  c = colors[0] if len(key)==5 else colors[1]
+  ax =plt.plot(ws, bds[key], styles[i], label=key, color=c)
+plt.legend(); plt.xlabel("$\Omega $ [Hz]"); plt.ylabel("fft rms 0-250 [Hz]")
 
 # %%
