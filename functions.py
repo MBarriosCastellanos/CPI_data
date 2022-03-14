@@ -488,7 +488,7 @@ def plot_sigmoid(x, a, wc, h, l1, l2, x_max):
   '''
   Function for plot, sigmoid, derivate sigmoid, boundaries and intersection
   '''
-  cs = [(0,0,0), (0.3,0.3,0.3), (0.7,0.7,0.7)]
+  cs = [(0,0,0), (0.5, 0.3906, 0.24875), (0.7,0.7,0.7)]
   lb = a[0];    ub = a[0] + a[1]  # boundaries
   fig, ax = plt.subplots(1, 1)    # create curve
   y_max = sigmoid(a, x_max)       # y of maximum dy

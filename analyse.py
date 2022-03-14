@@ -1,7 +1,6 @@
 # %% =======================================================================
 # Import dict
 # ==========================================================================
-from turtle import color
 from silx.io.dictdump import h5todict, dicttoh5 # import, export h5 files
 import numpy as np                              # mathematics
 import pandas as pd                             # mathematics\
@@ -25,6 +24,9 @@ print('Basic Libraries imported ████████████████
 # function 
 # ==========================================================================
 START = time.time()
+col1 = [  0,      0,       0, 1] # Color black            
+col2 = [0.5, 0.3906, 0.24875, 1] # Color yellow
+col3 = [0.3, 0.3000, 0.30000, 1] # Color gray
 from functions_signal import get_var, time_signal, plot_lims
 label1 = lambda w, mu, q : '%.0f [Hz], %.0f [mPa-s], %.0f \
   [$\mathrm{m^3/h}$]'%(w/60, mu, q)
@@ -32,11 +34,12 @@ def plot1(curves, DF,  x='wc', y='h', y_c=1e5/(9.81*7) ,
   xlabel='water cut %', ylabel='h [m]', loc='best', xlim=[0, 100]):
   '''simples dataframe plot by curves'''
   styles = ['o-.', 's--', 'd--', '.:']*10
+  colors = [col1, col2, col2, col3]*10
   for i, curve in enumerate(curves):
     df = DF[DF['curve']==curve] # used dataframe
     label = label1(df['w'].mean(), df['mu'].mean(), df['Q'].mean())
     df_y = df['dp']/df['rho'] if y=='h' else df[y]
-    plt.plot(df[x], df_y*y_c, styles[i], label=label, color='k')
+    plt.plot(df[x], df_y*y_c, styles[i], label=label, color=colors[i])
   plt.xlabel(xlabel); plt.ylabel(ylabel); plt.xlim(xlim); plt.legend(loc=loc)
 def scatter3d (x, y, z, keys, lims, rows=2, cols=2, 
   xlim=[0, 100], ylim=[0, 1000]):
@@ -58,7 +61,7 @@ def scatter3d (x, y, z, keys, lims, rows=2, cols=2,
 def spectrum(f, fft, df, I, j, n2, keys, n1=0):
   fig, axs = plt.subplots(len(I), 1, sharex=True, sharey=True)
   m = fft[I, n1:n2, j].max();  key = keys[j]      # max vibration
-  gc = (.8,.8,.8,); pc = (.3,.3,.3,)  # Grid Color, spectrum color
+  gc = (.8,.8,.8,);   # Grid Color
   for ax, i in zip(axs, I):
     wc = df['wc'].iloc[i]; w = df['w'].iloc[i]/60
     # harmonics ------------------------------------------------------------
@@ -70,14 +73,16 @@ def spectrum(f, fft, df, I, j, n2, keys, n1=0):
     ax.plot(f[peaks], fft[i, peaks, j], 'x', color='k')
     # log plot -------------------------------------------------------------
     ax2 = ax.twinx();           ax2.set_yscale('log')
-    ax2.plot(f[n1:n2], fft[i, n1:n2, 1], alpha=0.6, color=pc)
+    ax2.plot(f[n1:n2], fft[i, n1:n2, 1], alpha=0.6, color=col2)
     ax2.set_ylim([6e-5, 4e-1]); ax2.set_yticks([1e-4, 1e-3, 1e-2, 1e-1 ])
-    # log plot -------------------------------------------------------------
-    ax.plot(f[n1:n2], fft[i, n1:n2, j],  label=('wc = %.2f%%'%wc), color=pc)
+    # lin plot -------------------------------------------------------------
+    ax.plot(f[n1:n2], fft[i, n1:n2, j], label=('wc = %.2f%%'%wc),color=col1)
     ax.set_ylim([0, m*9/8]);  ax.set_xlim([f[n1], f[n2]]);  
     ax.legend(loc='upper left')
-    ax.set_ylabel('a [$\mathrm{m/s^2}$]')
-    ax2.set_ylabel('a [$\mathrm{m/s^2}$]', alpha=0.5)
+    ax.set_ylabel('a [$\mathrm{m/s^2}$]', color=col1)
+    ax2.set_ylabel('a [$\mathrm{m/s^2}$]', color=col2)
+    ax.set_zorder(ax2.get_zorder()+12) # set axis order 
+    ax.patch.set_visible(False)        # set axis order 
 
   ax.set_xlabel('frequency [Hz]'); fig.subplots_adjust(hspace=0)
   fig.suptitle(key)
@@ -98,12 +103,12 @@ def pearson_bar(DF, PR, y_i, ylabel, ini='', end='', n=15):
   features = X.columns;   features = features[i]  # get features no 
   # Compare features with R value ------------------------------------------
   fig, ax = plt.subplots(1, 2)      # figure with pearson correlation bar
-  y1 = ax[0].barh(features, values, color='k') # figure with barh
+  y1 = ax[0].barh(features, values, color=col1) # figure with barh
   ax[0].set_xlim([ values.min()*0.99, values.max()*1.01 ])     # x lims
   ax[0].bar_label(y1, color='k', fmt='%.2f')
   ax[0].set_xlabel('Pearson R Coefficient')
   # get Data Frame ---------------------------------------------------------
-  ax[1].plot(y, X[features[-1]], '.', color='k')  # plot best feature
+  ax[1].plot(y, X[features[-1]], '.', color=col2)  # plot best feature
   ax[1].set_xlabel(ylabel); ax[1].set_ylabel(features[-1]);   # format
   return fig, list(features), list(values)
 def logit(b, x):
@@ -125,7 +130,7 @@ def scatter(DF, PR, curves, pr_i, key):
     y = np.r_[y, j*np.ones(len(df))   ]   # curves
     z = np.r_[z, df['class']]             # classes
   fig, ax = plt.subplots(1, 1) # plot best features ------------------------
-  colors = [(.6, .6, .6), (.5, .5, .5), (.0, .0, .0)] # colors for 
+  colors = [col3, col2, col1] # colors for 
   for i, m in enumerate(['_', 'o', 's']):   # for every class  
     I = np.where(z==i)[0]                   # index
     ax.plot(x[I], y[I], m, color=colors[i]) # plot 
@@ -142,16 +147,16 @@ def plot_logit(LG, bs, key, feature, scores):
     # plot training and test data ------------------------------------------
     lg = LG[np.round(LG['w'])==w];        t = lg['threshold'].mean()
     train =lg[lg['train'] == 1];  test = lg[lg['train'] == 0]
-    ax.plot(test['x'], test['y'], 'o', color='gray', 
+    ax.plot(test['x'], test['y'], 'o', color=col2, 
       markersize=7, alpha=0.5)  # test data
-    ax.plot(train['x'], train['y'], 'x', color='k', markersize=10,
+    ax.plot(train['x'], train['y'], 'x', color=col1, markersize=10,
       markeredgewidth=2)  
     ax.set_xlim([LG['x'].min(), LG['x'].max()]);  ax.set_ylim([-0.05, 1.05])
     # plot logit function --------------------------------------------------
     x_l = np.linspace(LG['x'].min(), LG['x'].max(), num=1000) # parameter
-    p_l = logit(b, np.array([x_l]).T)                 # likelihood through logit function
-    ax.plot(x_l, p_l, '--', color='k')        # plot logit
-    ax.vlines(t,-0.1, 1.1, color='gray', linestyles=':')
+    p_l = logit(b, np.array([x_l]).T)   # likelihood through logit function
+    ax.plot(x_l, p_l, '--', color=col3) # plot logit
+    ax.vlines(t,-0.1, 1.1, color=col1, linestyles=':')
     ax.set_ylabel('class at %s [Hz]'%w);  
     ax.set_yticks([0, 0.5, 1]); ax.grid('on'); 
   fig.text(0.25, 0.9, 'train score =  %.4f\ntest score = %.4f '%( 
@@ -260,7 +265,6 @@ for key in keys:                         # get array of fft vibration
   vib_arr = np.dstack((vib_arr, signal.Y)) if key!=keys[0] else signal.Y
 time_elapsed(START)             # Time elapsed in the process
 
-
 # %% =======================================================================
 # Get fft plots all signals
 # ==========================================================================
@@ -313,7 +317,7 @@ fig3, features, _ = pearson_bar(DF, PR,   # figure of person parameters
 F = ['_'.join(f.split('_')[:-1]) for f in features] # Features to analyse
 K = [f.split('_')[-1] for f in features]            # Keys to analyse
 time_elapsed(START)                       # Time elapsed in the process
-FT = FT.sort_values("AC-06Y", axis=0, ascending=False); FT
+FT = FT.sort_values('AC-06Y', axis=0, ascending=False); FT
 
 # %% =======================================================================
 # compare features behavior
@@ -332,10 +336,12 @@ time_elapsed(START)             # Time elapsed in the process
 print('█████████████████████ logistic regression ████████████████████████')
 I = DF[DF['class']!=0].index; m = len(I) # filter class 1 and 2
 train, test = train_test(m, 10)   # get aleatory train division of 10%
+split = np.zeros(m);  split[train] = 1  # data is for train=1 or test=0
 y = 2 - np.array(DF['class'].loc[I]); y = y.reshape(m, 1)   # y
 ws = [30, 40, 50]                 # angular velocities in Hz
-FT = pd.DataFrame(index=["test score", "train score"]) # Result dataframe
+FT = pd.DataFrame(index=['test score', 'train score']) # Result dataframe
 feature = F[0]; bds = {}          # 'fft_rms_0_2hHz' , boundaries
+print('the selected feature is ███ %s ███'%(feature))
 for key in keys:                  # Evaluate all sensors
   PR = pd.DataFrame(h5todict('results/' + key + '_' + norm + '.h5'))    
   X = np.c_[np.abs(PR[feature].loc[I]) , DF['w'].loc[I]/60] # X = [f, w]  
@@ -343,26 +349,85 @@ for key in keys:                  # Evaluate all sensors
   opt = minimize(lambda b: cost(b, X[train], y[train]), [0,0,0])# optimize 
   b = opt.x       # predicted constants of logit function
   bs = [np.array([b[0] + b[2]*w, b[1]]) for w in ws]  # adjust to one dim
-  ts = [threshold(X, b) for b in bs]  # predicted threshold boundaries
-  bds[key] = ts
-  split = np.zeros(m);  split[train] = 1  # data is for train=1 or test=0
-  bounds = np.sum([(np.round(X[:,1])==w)*t for w, t in zip(ws, ts)], axis=0)
+  bds[key] = [threshold(X, b) for b in bs]# predicted threshold boundaries
+  bounds = np.sum([
+    (np.round(X[:,1])==w)*t for w, t in zip(ws, bds[key] )], axis=0)
   # plot logit function --------------------------------------------------
   LG = pd.DataFrame(np.c_[X, y[:,0], split, bounds], # Logistic Regresion
     columns= ['x', 'w', 'y', 'train','threshold'])
   FT[key] = [score(y[n,0], pred(X[n, 0], bounds[n])) for n in [test, train]]
-  if any(key == np.array(["AC-01Y", "AC-04", "AC-06Y"])):
+  if any(key == np.array(['AC-01Y', 'AC-04', 'AC-06Y'])):
     plot_logit(LG, bs, key, feature, FT[key])
 time_elapsed(START);             # Time elapsed in the process
-FT.sort_values("test score", axis=1, ascending=False)
+FT.sort_values('test score', axis=1, ascending=False)
 
-
-# %%
-styles = ["o--", "d--", "s--", "x-", "+-", "_-", "|--", "o:", "d:", "s:"]
-colors = [(.5,.5,.5), (0,0,0)]
+# %% =======================================================================
+# Plot line regression comparison
+# ==========================================================================
+styles = ['o--', 'd--', 's--', 'x-', '+-', '.-', '|--', 'o:', 'd:', 's:']
+colors = [col1, col2, col3]
 for i, key in enumerate(bds):
-  c = colors[0] if len(key)==5 else colors[1]
-  ax =plt.plot(ws, bds[key], styles[i], label=key, color=c)
-plt.legend(); plt.xlabel("$\Omega $ [Hz]"); plt.ylabel("fft rms 0-250 [Hz]")
+  c = colors[1] if len(key)==5 else colors[0]
+  c = colors[2] if key[4]=='6' else c
+  ax =plt.plot(bds[key], ws, styles[i], label=key, color=c)
+plt.legend(); plt.xlabel('$\Omega $ [Hz]'); plt.ylabel('fft rms 0-250 [Hz]')
 
-# %%
+# %% =======================================================================
+# plot final result
+# ==========================================================================
+key = 'AC-04'; print('the selected key is ███ %s ███'%(key))
+PR = pd.DataFrame(h5todict('results/' + key + '_' + norm + '.h5'))    
+X = np.c_[np.abs(PR[feature].loc[I]) , DF['w'].loc[I]/60] # X = [f, w]
+bounds = np.sum([
+  (np.round(X[:,1])==w)*t for w, t in zip(ws, bds[key] )], axis=0)
+LG = pd.DataFrame(np.c_[X, y[:,0], split, bounds], # Logistic Regresion
+    columns= ['x', 'w', 'y', 'train','threshold'])
+LG['Q'] = np.array(DF.loc[I]['Q'])
+LG['curve'] = np.array(DF.loc[I]['curve'])
+for j, curve in enumerate(curves):
+  LG['n_curves'] = (LG['curve']==curve)*j if j==0 else \
+     (LG['curve']==curve)*j + LG['n_curves']
+TR = LG[LG['train']==1];  TS = LG[LG['train']==0] 
+
+
+
+fig = plt.figure()
+ax = fig.add_subplot(projection='3d')
+
+regr =linregress(ws, bds[key])
+zz = np.linspace(29,51, num=50)
+yy = np.linspace(LG['Q'].min()*0.9, LG['Q'].max()*1.1, num=50)
+Yy, Zz  = np.meshgrid(yy, zz)
+Xx = regr.slope*Zz  + regr.intercept
+
+ax.plot_wireframe(Xx, Yy, Zz,  alpha=0.5, color=col3)
+
+
+ax.scatter3D(TS[TS['y']==0]['x'],  
+  TS[TS['y']==0]['Q'], 
+  TS[TS['y']==0]['w'], color=col1, marker='s', alpha=0.3)
+ax.scatter3D(TR[TR['y']==0]['x'], 
+  TR[TR['y']==0]['Q'], 
+  TR[TR['y']==0]['w'], color=col1, marker='x', alpha=1, s=80)
+ax.scatter3D(TS[TS['y']==1]['x'],  
+  TS[TS['y']==1]['Q'],
+  TS[TS['y']==1]['w'], color=col2, marker='o', alpha=1, s=50)
+ax.scatter3D(TR[TR['y']==1]['x'], 
+  TR[TR['y']==1]['Q'],  
+  TR[TR['y']==1]['w'], color=col2,  marker='x', alpha=1, s=80)
+
+ax.set_xlabel(feature)
+ax.set_ylabel('Q [$\mathrm{m^3/h}$]')
+ax.set_zlabel('$\Omega$ [Hz]')
+
+#ax.set_xlim(LG['x'].min(), LG['x'].max())
+ax.set_ylim(LG['Q'].min(),LG['Q'].max())
+ax.set_zlim(30,50)
+
+ax.view_init(45, 250)
+
+#ax.plot(, x, '-')
+
+
+
+
