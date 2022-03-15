@@ -35,12 +35,15 @@ def plot1(curves, DF,  x='wc', y='h', y_c=1e5/(9.81*7) ,
   '''simples dataframe plot by curves'''
   styles = ['o-.', 's--', 'd--', '.:']*10
   colors = [col1, col2, col2, col3]*10
+  fig, ax = plt.subplots()
   for i, curve in enumerate(curves):
     df = DF[DF['curve']==curve] # used dataframe
     label = label1(df['w'].mean(), df['mu'].mean(), df['Q'].mean())
     df_y = df['dp']/df['rho'] if y=='h' else df[y]
-    plt.plot(df[x], df_y*y_c, styles[i], label=label, color=colors[i])
-  plt.xlabel(xlabel); plt.ylabel(ylabel); plt.xlim(xlim); plt.legend(loc=loc)
+    ax.plot(df[x], df_y*y_c, styles[i], label=label, color=colors[i])
+  ax.set_xlabel(xlabel);  ax.set_ylabel(ylabel); 
+  ax.set_xlim(xlim);      ax.legend(loc=loc)
+  return fig
 def scatter3d (x, y, z, keys, lims, rows=2, cols=2, 
   xlim=[0, 100], ylim=[0, 1000]):
   '''Simples plots for  fft vibration '''
@@ -221,10 +224,12 @@ time_elapsed(START)                           # Time elapsed in the process
 print('█████████████████████ wc vs h, and wc vs Ta ██████████████████████')
 curves_sel = [curves[i] for i in [16, 11, 12, 6]]
 # Curve  of h vs wc --------------------------------------------------------
-plot1(curves_sel, DF, loc='upper left');  plt.ylim([2,12]); plt.show()   
+fig = plot1(curves_sel, DF, loc='upper left');  plt.ylim([2,12]); plt.show()
+tikz_save('images/H.tex', figure=fig)
 # Curve  of Ta vs wc -------------------------------------------------------
-plot1(curves_sel, DF, y='Ta', y_c=1/7, ylabel='dimesionaless torque', 
+fig = plot1(curves_sel, DF, y='Ta', y_c=1/7, ylabel='dimesionaless torque', 
   loc='upper right');   plt.show()
+tikz_save('images/Ta.tex', figure=fig)
 time_elapsed(START)             # Time elapsed in the process
 
 #%% ========================================================================
@@ -383,51 +388,26 @@ bounds = np.sum([
 LG = pd.DataFrame(np.c_[X, y[:,0], split, bounds], # Logistic Regresion
     columns= ['x', 'w', 'y', 'train','threshold'])
 LG['Q'] = np.array(DF.loc[I]['Q'])
-LG['curve'] = np.array(DF.loc[I]['curve'])
-for j, curve in enumerate(curves):
-  LG['n_curves'] = (LG['curve']==curve)*j if j==0 else \
-     (LG['curve']==curve)*j + LG['n_curves']
-TR = LG[LG['train']==1];  TS = LG[LG['train']==0] 
+# linear regression for plane ----------------------------------------------
+regr =linregress(ws, bds[key]); o = np.linspace(29,51)  # Omega Z
+q = np.linspace(LG['Q'].min()*0.9, LG['Q'].max()*1.1)   # flow Y
+O, Q  = np.meshgrid(o, q);  m = [".", "x"]  # Meshgrip m
+fig = plt.figure(figsize=(13, 5)); 
+for i, title in enumerate(["test", "train"]):    # for in 0 test, 1 train
+  df1 = LG[LG['train']==i]              # filter by train test
+  ax = fig.add_subplot(121 + i, projection='3d') # Add figure
+  ax.set_box_aspect(aspect = (6,4,2))   # Axis aspect ration
+  Pr = regr.slope*O  + regr.intercept   # Parameter
+  ax.plot_wireframe(Pr, Q, O,  alpha=0.5, color=col3) #Plot boundary
+  for j, col in enumerate([col1, col2]): # 0 water-in-oil, 1 oil-in-water
+    df = df1[df1['y']==j]                     # filter by class
+    ax.scatter3D(df['x'], df['Q'], df['w'],   # plot
+      color=col, marker=m[j], alpha=1, s=50)
+  ax.set_xlabel(feature);         ax.set_ylabel('Q [$\mathrm{m^3/h}$]')    
+  ax.set_zlabel('$\Omega$ [Hz]'); ax.set_xlim(LG['x'].min(), LG['x'].max())
+  ax.set_zlim(30,50);             ax.set_ylim(LG['Q'].min(), LG['Q'].max()) 
+  ax.view_init(22, 250);          ax.set_title(title)
+fig.legend(["boundary", "oil-in-water", "water-in-oil"]); fig.tight_layout()
 
 
-
-fig = plt.figure()
-ax = fig.add_subplot(projection='3d')
-
-regr =linregress(ws, bds[key])
-zz = np.linspace(29,51, num=50)
-yy = np.linspace(LG['Q'].min()*0.9, LG['Q'].max()*1.1, num=50)
-Yy, Zz  = np.meshgrid(yy, zz)
-Xx = regr.slope*Zz  + regr.intercept
-
-ax.plot_wireframe(Xx, Yy, Zz,  alpha=0.5, color=col3)
-
-
-ax.scatter3D(TS[TS['y']==0]['x'],  
-  TS[TS['y']==0]['Q'], 
-  TS[TS['y']==0]['w'], color=col1, marker='s', alpha=0.3)
-ax.scatter3D(TR[TR['y']==0]['x'], 
-  TR[TR['y']==0]['Q'], 
-  TR[TR['y']==0]['w'], color=col1, marker='x', alpha=1, s=80)
-ax.scatter3D(TS[TS['y']==1]['x'],  
-  TS[TS['y']==1]['Q'],
-  TS[TS['y']==1]['w'], color=col2, marker='o', alpha=1, s=50)
-ax.scatter3D(TR[TR['y']==1]['x'], 
-  TR[TR['y']==1]['Q'],  
-  TR[TR['y']==1]['w'], color=col2,  marker='x', alpha=1, s=80)
-
-ax.set_xlabel(feature)
-ax.set_ylabel('Q [$\mathrm{m^3/h}$]')
-ax.set_zlabel('$\Omega$ [Hz]')
-
-#ax.set_xlim(LG['x'].min(), LG['x'].max())
-ax.set_ylim(LG['Q'].min(),LG['Q'].max())
-ax.set_zlim(30,50)
-
-ax.view_init(45, 250)
-
-#ax.plot(, x, '-')
-
-
-
-
+# %%
