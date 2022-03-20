@@ -30,8 +30,9 @@ col3 = [0.3, 0.3000, 0.30000, 1] # Color gray
 from functions_signal import get_var, time_signal, plot_lims
 label1 = lambda w, mu, q : '%.0f [Hz], %.0f [mPa-s], %.0f \
   [$\mathrm{m^3/h}$]'%(w/60, mu, q)
-def plot1(curves, DF,  x='wc', y='h', y_c=1e5/(9.81*7) ,
-  xlabel='water cut %', ylabel='h [m]', loc='best', xlim=[0, 100]):
+def plot1(curves, DF,  x='wc', y='h', y_c=1e5*60**2/(4*np.pi**2*0.2*0.1**2) ,
+  xlabel='water cut %', ylabel='elevation coefficient', loc='best', 
+  xlim=[0, 100]):
   '''simples dataframe plot by curves'''
   styles = ['o-.', 's--', 'd--', '.:']*10
   colors = [col1, col2, col2, col3]*10
@@ -39,7 +40,7 @@ def plot1(curves, DF,  x='wc', y='h', y_c=1e5/(9.81*7) ,
   for i, curve in enumerate(curves):
     df = DF[DF['curve']==curve] # used dataframe
     label = label1(df['w'].mean(), df['mu'].mean(), df['Q'].mean())
-    df_y = df['dp']/df['rho'] if y=='h' else df[y]
+    df_y = df['dp']/df['rho']/df['w']**2 if y=='h' else df[y]
     ax.plot(df[x], df_y*y_c, styles[i], label=label, color=colors[i])
   ax.set_xlabel(xlabel);  ax.set_ylabel(ylabel); 
   ax.set_xlim(xlim);      ax.legend(loc=loc)
@@ -224,10 +225,10 @@ time_elapsed(START)                           # Time elapsed in the process
 print('█████████████████████ wc vs h, and wc vs Ta ██████████████████████')
 curves_sel = [curves[i] for i in [16, 11, 12, 6]]
 # Curve  of h vs wc --------------------------------------------------------
-fig = plot1(curves_sel, DF, loc='upper left');  plt.ylim([2,12]); plt.show()
+fig = plot1(curves_sel, DF, loc='upper left');  #plt.ylim([2,12]); plt.show()
 tikz_save('images/H.tex', figure=fig)
 # Curve  of Ta vs wc -------------------------------------------------------
-fig = plot1(curves_sel, DF, y='Ta', y_c=1/7, ylabel='dimesionaless torque', 
+fig = plot1(curves_sel, DF, y='Ta', y_c=1/8, ylabel='dimesionaless torque', 
   loc='upper right');   plt.show()
 tikz_save('images/Ta.tex', figure=fig)
 time_elapsed(START)             # Time elapsed in the process
@@ -239,7 +240,7 @@ time_elapsed(START)             # Time elapsed in the process
 print('███████████████████ Genering sigmoid function ████████████████████')
 df = DF[DF['curve']==curves[12]] # dataframe for only this curve
 wc = np.array( df['wc']);                   # watercut [%]
-h = np.array(df['dp']*1e5/(df['rho']*9.81*7)) # pressure head [m]
+h = np.array(df['dp']*1e5/(df['rho']*9.81*8)) # pressure head [m]
 # parameter sigmoid function  a0 = h_max, a1 = h_max - h_min, a2 = slope
 a = [h.min(), h[:-1].max() - h.min(), 1, 40]# a3 = water cut transition
 # Getting sigmoid PR through optimization ----------------------------------
@@ -251,9 +252,10 @@ dy_max = dsigmoid(a, a[3])  # derivate of sigmid function in wc
 limit = np.where(dsigmoid(a, x)>dy_max*0.2)[0]  # transition region
 l1 = np.where(wc<x[ limit[ 0] ])[0][-1]         # begin trans
 l2 = np.where(wc>x[ limit[-1] ])[0][ 0]         # end   trans
-plot_sigmoid(x, a, wc, h, l1, l2, a[3]) 
+fig = plot_sigmoid(x, a, wc, h, l1, l2, a[3]) 
 plt.title(label1(df['w'].mean(), df['mu'].mean(), df['Q'].mean()))
 time_elapsed(START)             # Time elapsed in the process
+tikz_save('images/sigmoid.tex', figure=fig)
 
 
 # %% =======================================================================
@@ -266,7 +268,7 @@ df = DF[DF['curve']==curve]       # dataframe for the corresponding curve
 t = h5todict('data/t.h5')['t']    # time vector 
 vib = h5todict('data/' + curve + '.h5')  # vib dictionary in time
 for key in keys:                         # get array of fft vibration
-  signal = time_signal(vib[key], t, df['w'], 7)
+  signal = time_signal(vib[key], t, df['w'], 8)
   vib_arr = np.dstack((vib_arr, signal.Y)) if key!=keys[0] else signal.Y
 time_elapsed(START)             # Time elapsed in the process
 
@@ -279,9 +281,10 @@ n = np.where(signal.f>=1000)[0][0]; x = df['wc']
 y = signal.f[:n:512];               z = np.log10(vib_arr[:, :n:512, :])
 lims = [0, i1 + 1, i2, len(x) + 1]
 fig1 = scatter3d(x, y, z[:,:, 3:7], keys[3:7], lims)
+tikz_save('images/sensors1.tex', figure=fig1)
 fig2 = scatter3d(x, y, np.dstack((z[:,:, :3], z[:,:, 7:])), 
   keys[:3] + keys[7:], lims, cols=3)
-#tikz_save('images/' + key + '.tex')
+tikz_save('images/sensors2.tex', figure=fig2)
 time_elapsed(START)             # Time elapsed in the process
 
 # %% =======================================================================
@@ -294,7 +297,9 @@ index = [15, 30, 50, 57];
 for j, key in enumerate(keys):                # AC-05 AC-01Z
   if key == 'AC-05' or key == 'AC-01Z':       # 
     fig1 = spectrum(signal.f, vib_arr, df, index, j, n, keys)
+    tikz_save('images/fft_' + key + '_0-750Hz.tex', figure=fig1)
     fig2 = spectrum(signal.f, vib_arr, df, index, j, n2, keys, n1=n1)
+    tikz_save('images/fft_' + key + '_1-5kHz.tex', figure=fig2)
 time_elapsed(START)             # Time elapsed in the process
 
 # %% =======================================================================
@@ -319,6 +324,7 @@ for key in keys:
   FT.index = f if key == keys[0] else FT.index; FT.loc[f, key] = v
 fig3, features, _ = pearson_bar(DF, PR,   # figure of person parameters
   'Ta', 'dimensionaless torque', ini='fft_rms', n=9)
+tikz_save('images/pearson.tex', figure=fig3)
 F = ['_'.join(f.split('_')[:-1]) for f in features] # Features to analyse
 K = [f.split('_')[-1] for f in features]            # Keys to analyse
 time_elapsed(START)                       # Time elapsed in the process
@@ -332,7 +338,8 @@ print('██████████████████ feature behavior c
 for feature, key in zip(F[-2:], K[-2:]):    # evaluate the two best features
   path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   # path   
   PR = pd.DataFrame(h5todict(path_pr))                        # parameters
-  scatter(DF, PR, curves, feature, key)     # plot simple comparison
+  fig4 = scatter(DF, PR, curves, feature, key)     # plot simple comparison
+  tikz_save('images/fft_rms_0-250Hz_' + key + '.tex', figure=fig4)
 time_elapsed(START)             # Time elapsed in the process
 
 # %% =======================================================================
@@ -362,7 +369,8 @@ for key in keys:                  # Evaluate all sensors
     columns= ['x', 'w', 'y', 'train','threshold'])
   FT[key] = [score(y[n,0], pred(X[n, 0], bounds[n])) for n in [test, train]]
   if any(key == np.array(['AC-01Y', 'AC-04', 'AC-06Y'])):
-    plot_logit(LG, bs, key, feature, FT[key])
+    fig5 = plot_logit(LG, bs, key, feature, FT[key])
+    tikz_save('images/logit_fft_rms_0-250Hz_' + key + '.tex', figure=fig5)
 time_elapsed(START);             # Time elapsed in the process
 FT.sort_values('test score', axis=1, ascending=False)
 
@@ -376,6 +384,8 @@ for i, key in enumerate(bds):
   c = colors[2] if key[4]=='6' else c
   ax =plt.plot(bds[key], ws, styles[i], label=key, color=c)
 plt.legend(); plt.xlabel('$\Omega $ [Hz]'); plt.ylabel('fft rms 0-250 [Hz]')
+tikz_save('images/comparisson.tex')
+
 
 # %% =======================================================================
 # plot final result
@@ -391,13 +401,13 @@ LG['Q'] = np.array(DF.loc[I]['Q'])
 # linear regression for plane ----------------------------------------------
 regr =linregress(ws, bds[key]); o = np.linspace(29,51)  # Omega Z
 q = np.linspace(LG['Q'].min()*0.9, LG['Q'].max()*1.1)   # flow Y
-O, Q  = np.meshgrid(o, q);  m = [".", "x"]  # Meshgrip m
-fig = plt.figure(figsize=(13, 5)); 
-for i, title in enumerate(["test", "train"]):    # for in 0 test, 1 train
+O, Q  = np.meshgrid(o, q);  m = ['.', 'x']  # Meshgrip m
+Pr = regr.slope*O  + regr.intercept   # Parameter
+for i, title in enumerate(['test', 'train']):    # for in 0 test, 1 train
+  fig = plt.figure(figsize=(13, 5)); 
   df1 = LG[LG['train']==i]              # filter by train test
-  ax = fig.add_subplot(121 + i, projection='3d') # Add figure
+  ax = fig.add_subplot(111, projection='3d') # Add figure
   ax.set_box_aspect(aspect = (6,4,2))   # Axis aspect ration
-  Pr = regr.slope*O  + regr.intercept   # Parameter
   ax.plot_wireframe(Pr, Q, O,  alpha=0.5, color=col3) #Plot boundary
   for j, col in enumerate([col1, col2]): # 0 water-in-oil, 1 oil-in-water
     df = df1[df1['y']==j]                     # filter by class
@@ -407,7 +417,29 @@ for i, title in enumerate(["test", "train"]):    # for in 0 test, 1 train
   ax.set_zlabel('$\Omega$ [Hz]'); ax.set_xlim(LG['x'].min(), LG['x'].max())
   ax.set_zlim(30,50);             ax.set_ylim(LG['Q'].min(), LG['Q'].max()) 
   ax.view_init(22, 250);          ax.set_title(title)
-fig.legend(["boundary", "oil-in-water", "water-in-oil"]); fig.tight_layout()
+  ax.legend(['boundary', 'oil-in-water', 'water-in-oil'], 
+    ncol=3, loc='lower center');  fig.tight_layout()
+  tikz_save('images/bound_' + title + '.tex', figure=fig)
+ 
 
-
-# %%
+# %% =======================================================================
+# plot intermittent
+# ==========================================================================
+key = 'AC-04'; print('the selected key is ███ %s ███'%(key))
+J = DF[DF['class']==0].index; m = len(J) # filter class 1 and 2
+PR = pd.DataFrame(h5todict('results/' + key + '_' + norm + '.h5'))    
+x = np.abs(PR[feature].loc[J]);   y = np.array(DF.loc[J]['Q'])
+z = np.array(DF['w'].loc[J]/60) 
+# linear regression for plane ----------------------------------------------
+fig = plt.figure(figsize=(13, 5)); 
+ax = fig.add_subplot(111, projection='3d') # Add figure
+ax.set_box_aspect(aspect = (6,4,2))   # Axis aspect ration
+ax.plot_wireframe(Pr, Q, O,  alpha=0.5, color=col3) #Plot boundary
+ax.scatter3D(x, y, z, color=col, marker='_', alpha=1, s=50)
+ax.set_xlabel(feature);         ax.set_ylabel('Q [$\mathrm{m^3/h}$]')    
+ax.set_zlabel('$\Omega$ [Hz]'); ax.set_xlim(LG['x'].min(), LG['x'].max())
+ax.set_zlim(30,50);             ax.set_ylim(LG['Q'].min(), LG['Q'].max()) 
+ax.view_init(22, 250);          ax.set_title('intermittent')
+ax.legend(['boundary', 'transition'], 
+  ncol=2, loc='lower center');  fig.tight_layout()
+tikz_save('images/bound_intermittent.tex', figure=fig)

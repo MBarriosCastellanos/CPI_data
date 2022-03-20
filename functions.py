@@ -512,6 +512,7 @@ def plot_sigmoid(x, a, wc, h, l1, l2, x_max):
   ax.plot(x_max, y_max, 'x', color=cs[2])          # center
   ax.plot( (yplot-b)/m, yplot , ':', color=cs[2])  # line
   fig.legend(bbox_to_anchor=(0.9, 0.3))
+  return fig
 #==fast fourier transform ==================================================#
 def dft(x, fs, n, type='amp'):
   '''having the signal in frequency domain wit 
