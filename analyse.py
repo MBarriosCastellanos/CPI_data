@@ -45,6 +45,20 @@ def plot1(curves, DF,  x='wc', y='h', y_c=1e5*60**2/(4*np.pi**2*0.2*0.1**2) ,
   ax.set_xlabel(xlabel);  ax.set_ylabel(ylabel); 
   ax.set_xlim(xlim);      ax.legend(loc=loc)
   return fig
+def scatter1d(x, y, z, key, lims, xlim=[0, 100], ylim=[0, 1000]):
+  X, Y = np.meshgrid(x,y)                 # create a matrix array
+  fig, ax = plt.subplots(constrained_layout=True)
+  mks = ['o', '|', 's']                                 # markers
+  lbs = ['water-in-oil', 'transition', 'oil-in-water']  # labels
+  for i, m in enumerate(mks):           # for in emulsion kinds (lbs)
+    [xp, yp, zp] = [k[:, lims[i]:lims[i+1]] for k in [X, Y, z.T]]
+    cs = ax.scatter(xp, yp, c=zp,       #plot evert emulsion
+      marker=m, cmap=cm.copper, vmin=-5.5, vmax=-3.5, alpha=0.8)
+  ax.set_title(key); ax.set_xlim(xlim); ax.set_ylim(ylim)
+  ax.set_xlabel('water cut %'); ax.set_ylabel('frequency [Hz]')
+  fig.colorbar(cs, ax=ax, location='right') # colorbar
+  fig.legend(lbs, loc='upper left', bbox_to_anchor=(0.92, 0.8)) #legend
+  return fig  #return figure
 def scatter3d (x, y, z, keys, lims, rows=2, cols=2, 
   xlim=[0, 100], ylim=[0, 1000]):
   '''Simples plots for  fft vibration '''
@@ -281,12 +295,14 @@ n = np.where(signal.f>=1000)[0][0]; x = df['wc']
 y = signal.f[:n:512];               z = np.log10(vib_arr[:, :n:512, :])
 lims = [0, i1 + 1, i2, len(x) + 1]
 fig1 = scatter3d(x, y, z[:,:, 3:7], keys[3:7], lims)
-tikz_save('images/sensors1.tex', figure=fig1)
+#tikz_save('images/sensors1.tex', figure=fig1)
 fig2 = scatter3d(x, y, np.dstack((z[:,:, :3], z[:,:, 7:])), 
   keys[:3] + keys[7:], lims, cols=3)
-tikz_save('images/sensors2.tex', figure=fig2)
+#tikz_save('images/sensors2.tex', figure=fig2)
 time_elapsed(START)             # Time elapsed in the process
-
+for j, key in enumerate(keys):
+  fig = scatter1d(x, y, z[:,:, j], keys[j], lims)
+  tikz_save('images/sensors_' + key + '.tex', figure=fig); plt.close()
 # %% =======================================================================
 # Spectrum fft analysis
 # ==========================================================================
