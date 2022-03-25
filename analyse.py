@@ -76,25 +76,30 @@ def scatter3d (x, y, z, keys, lims, rows=2, cols=2,
   fig.colorbar(cs, ax=axs.flat[-1], location='right') # colorbar
   fig.legend(lbs, loc='upper left', bbox_to_anchor=(0.92, 0.8)) #legend
   return fig  #return figure
-def spectrum(f, fft, df, I, j, n2, keys, n1=0):
+def spectrum(f, fft, df, I, j, n2, keys, n1=0, low_data=False):
   fig, axs = plt.subplots(len(I), 1, sharex=True, sharey=True)
   m = fft[I, n1:n2, j].max();  key = keys[j]      # max vibration
   gc = (.8,.8,.8,);   # Grid Color
   for ax, i in zip(axs, I):
+    x_j = f[n1:n2];     y_j = fft[i, n1:n2, j]
     wc = df['wc'].iloc[i]; w = df['w'].iloc[i]/60
     # harmonics ------------------------------------------------------------
     ax.vlines([w*i for i in range(1, 7)] , 0,m*9/8, color=gc, linestyle=':')
     ax.vlines([w*7, w*14] , 0, m*9/8, color=gc, linestyle='--')
     ax.set_yticks([np.round(m*k/4,5) for k in range(1,5)])  # ticks
     # peaks ----------------------------------------------------------------
-    peaks, _ = find_peaks(fft[i, n1:n2, j], height=0.001)
+    peaks, _ = find_peaks(y_j, height=0.001)
     ax.plot(f[peaks], fft[i, peaks, j], 'x', color='k')
+    # reduce data ----------------------------------------------------------
+    sel = find_peaks(y_j, width=(None if n1==0 else 2))[0]
+    if low_data==True: 
+      x_j = x_j[sel];     y_j = x_j[sel]
     # log plot -------------------------------------------------------------
     ax2 = ax.twinx();           ax2.set_yscale('log')
-    ax2.plot(f[n1:n2], fft[i, n1:n2, 1], alpha=0.6, color=col2)
+    ax2.plot(x_j, y_j, alpha=0.6, color=col2)
     ax2.set_ylim([6e-5, 4e-1]); ax2.set_yticks([1e-4, 1e-3, 1e-2, 1e-1 ])
     # lin plot -------------------------------------------------------------
-    ax.plot(f[n1:n2], fft[i, n1:n2, j], label=('wc = %.2f%%'%wc),color=col1)
+    ax.plot(x_j, y_j, label=('wc = %.2f%%'%wc),color=col1)
     ax.set_ylim([0, m*9/8]);  ax.set_xlim([f[n1], f[n2]]);  
     ax.legend(loc='upper left')
     ax.set_ylabel('a [$\mathrm{m/s^2}$]', color=col1)
@@ -261,7 +266,7 @@ a = [h.min(), h[:-1].max() - h.min(), 1, 40]# a3 = water cut transition
 bounds = Bounds([a[0], a[1]*0.8, 0.05,  0], # optimization bound
   [a[0]*1.2, a[1], 2,  100])        # hmin, hmax - hmin, slope, wc_i
 a = minimize(lambda a: sum((sigmoid(a,wc)-h)**2), a, bounds=bounds).x
-x = np.linspace(0, 100, num=10001)          # water cut possibles
+x = np.linspace(0, 100, num=1001)          # water cut possibles
 dy_max = dsigmoid(a, a[3])  # derivate of sigmid function in wc
 limit = np.where(dsigmoid(a, x)>dy_max*0.2)[0]  # transition region
 l1 = np.where(wc<x[ limit[ 0] ])[0][-1]         # begin trans
