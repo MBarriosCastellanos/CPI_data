@@ -93,7 +93,7 @@ def spectrum(f, fft, df, I, j, n2, keys, n1=0, low_data=False):
     # reduce data ----------------------------------------------------------
     sel = find_peaks(y_j, width=(None if n1==0 else 2))[0]
     if low_data==True: 
-      x_j = x_j[sel];     y_j = x_j[sel]
+      x_j = x_j[sel];     y_j = y_j[sel]
     # log plot -------------------------------------------------------------
     ax2 = ax.twinx();           ax2.set_yscale('log')
     ax2.plot(x_j, y_j, alpha=0.6, color=col2)
@@ -316,10 +316,12 @@ print('the selected curve is ███ %s ███'%(curve))
 index = [15, 30, 50, 57];
 [n, n1, n2] = [np.where(signal.f>=i)[0][0] for i in [750, 1000, 5000]]
 for j, key in enumerate(keys):                # AC-05 AC-01Z
-  if key == 'AC-05' or key == 'AC-01Z':       # 
-    fig1 = spectrum(signal.f, vib_arr, df, index, j, n, keys)
+  if key == 'AC-04' or key == 'AC-01Z':       # 
+    fig1 = spectrum(signal.f, vib_arr, df, index, j, n, keys,
+    low_data=False)
     tikz_save('images/fft_' + key + '_0-750Hz.tex', figure=fig1)
-    fig2 = spectrum(signal.f, vib_arr, df, index, j, n2, keys, n1=n1)
+    fig2 = spectrum(signal.f, vib_arr, df, index, j, n2, keys, n1=n1,
+    low_data=False)
     tikz_save('images/fft_' + key + '_1-5kHz.tex', figure=fig2)
 time_elapsed(START)             # Time elapsed in the process
 
