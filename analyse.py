@@ -3,10 +3,9 @@
 # ==========================================================================
 from silx.io.dictdump import h5todict, dicttoh5 # import, export h5 files
 import numpy as np                              # mathematics
-import pandas as pd                             # mathematics\
+import pandas as pd                             # mathematics
 import glob                                     #  inspect folders
 import matplotlib.pyplot as plt
-from sympy import rotations                 # Plot several images
 from functions import sigmoid, dsigmoid, plot_sigmoid
 from functions import enum_vec, time_elapsed, enum_vec, filter_nan
 from sklearn import metrics, feature_selection  # metrics decision tree
@@ -200,7 +199,6 @@ def threshold(x, b):
   x_l = np.linspace(x[:,0].min(), x[:,0].max(), num=10000) # parameter
   p_l = logit(b, np.array([x_l]).T) # likelihood through logit function
   return x_l[np.where(p_l>=0.5)[0][0]] # division
-
 print('Function created  ████████████████████████████████████████████████')
 
 # %% =======================================================================
@@ -276,7 +274,6 @@ plt.title(label1(df['w'].mean(), df['mu'].mean(), df['Q'].mean()))
 time_elapsed(START)             # Time elapsed in the process
 tikz_save('images/sigmoid.tex', figure=fig)
 
-
 # %% =======================================================================
 # Get Data of DF and analysis data for all vibration analysis
 # ==========================================================================
@@ -308,6 +305,7 @@ time_elapsed(START)             # Time elapsed in the process
 for j, key in enumerate(keys):
   fig = scatter1d(x, y, z[:,:, j], keys[j], lims)
   tikz_save('images/sensors_' + key + '.tex', figure=fig); plt.close()
+  
 # %% =======================================================================
 # Spectrum fft analysis
 # ==========================================================================
@@ -351,7 +349,8 @@ tikz_save('images/pearson.tex', figure=fig3)
 F = ['_'.join(f.split('_')[:-1]) for f in features] # Features to analyse
 K = [f.split('_')[-1] for f in features]            # Keys to analyse
 time_elapsed(START)                       # Time elapsed in the process
-FT = FT.sort_values('AC-06Y', axis=0, ascending=False); FT
+FT = FT.sort_values('AC-06Y', axis=0, ascending=False)
+FT.astype(float).round(decimals=2).to_latex(buf='tables/table4.tex'); FT
 
 # %% =======================================================================
 # compare features behavior
@@ -396,6 +395,8 @@ for key in keys:                  # Evaluate all sensors
     tikz_save('images/logit_fft_rms_0-250Hz_' + key + '.tex', figure=fig5)
 time_elapsed(START);             # Time elapsed in the process
 FT.sort_values('test score', axis=1, ascending=False)
+(FT*100).astype(float).round(decimals=2).to_latex(buf='tables/table5.tex'); 
+FT
 
 # %% =======================================================================
 # Plot line regression comparison
