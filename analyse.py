@@ -449,7 +449,6 @@ for i, title in enumerate(['test', 'train']):    # for in 0 test, 1 train
     ncol=3, loc='lower center');  fig.tight_layout()
   tikz_save('images/bound_' + title + '.tex', figure=fig)
  
-
 # %% =======================================================================
 # plot intermittent
 # ==========================================================================
