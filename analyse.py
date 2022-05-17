@@ -17,7 +17,8 @@ from scipy.stats import linregress              # linear regression
 from scipy.signal import find_peaks             # peaks in spectrum
 from numpy.random import default_rng            # random number for train
 plt.rcParams['figure.figsize'] = (12,8)
-print('Basic Libraries imported █████████████████████████████████████████')
+width = 70
+print('Basic Libraries imported '.ljust(width, '█'))
 
 #%% ========================================================================
 # function 
@@ -199,47 +200,48 @@ def threshold(x, b):
   x_l = np.linspace(x[:,0].min(), x[:,0].max(), num=10000) # parameter
   p_l = logit(b, np.array([x_l]).T) # likelihood through logit function
   return x_l[np.where(p_l>=0.5)[0][0]] # division
-print('Function created  ████████████████████████████████████████████████')
+print('Function created '.ljust(width, '█'))
 
 # %% =======================================================================
 # Get Data of DF and analysis data
 # ==========================================================================
-print('██████████████████████████████ Keys ██████████████████████████████')
+print(' Keys '.center(width, '█')) 
 keys = [i[5:-3] for i in glob.glob('data/AC*')];  enum_vec(keys) 
 # DF_PR signals ------------------------------------------------------------
-print('██████████████████████████████ Signals ████████████████████████████')
-sig = [ 'time', 'fft'] ;                 enum_vec(sig) 
+print(' Signals '.center(width, '█'))
+sig = ['fft'] ;                 enum_vec(sig) 
 # statistics to analyse in every signal sig---------------------------------
-print('██████████████ Statistical analysis for every signal ██████████████')
+print(' Statistical analysis for every signal '.center(width, '█'))
 stat =  [ 'mean', 'var', 'gmean', 'hmean', 'rms']
 enum_vec(stat) 
 # frequency bound to analyze -----------------------------------------------
-print('████████████████ Frequency splits for every signal ███████████████')
+print(' Frequency splits for every signal '.center(width, '█'))
 var = get_var(5e3, 5e3) + get_var(2e3, 6e3) + get_var(1e3, 5e3) \
     + get_var(250, 1000)  + get_var(750, 750) + ['1alab']   
 enum_vec(var)                      
 # Construct column names ---------------------------------------------------
 columns = ['_'.join([i,j,k]) for k in var  for i in sig  for j in stat] 
 # possible signal normalization to analyze ---------------------------------
-print('███████ Every signal could be normalized by linear or log ████████')
+print(' Every signal could be normalized by linear or log '.center(
+  width, '█'))
 norms = ['x', 'log'];   enum_vec(norms) 
 norm = norms[1]; print('the normalization key is ███ %s ███'%(norm))
 # --------------------------------------------------------------------------
 DF = pd.DataFrame(h5todict('data/DF.h5'))
 # sort curves by rpm, flow -------------------------------------------------
-print('██████████████████████████████ Curves █████████████████████████████')
+print(' Curves '.center(width, '█'))
 curves = list(DF['curve'].unique());  Q = []; curve_a = curves[5]
 for curve in curves:
   df = DF[DF['curve']==curve]; Q.append(df['Q'].mean())
 curves = [curves[i] for i in np.argsort(Q)];  curves.remove(curve_a)
 curves = curves[:10] + [curve_a] + curves[10:]; enum_vec(curves)
-print('Analyses data defined...')
+print('Analyses data defined...'.ljust(width, '_'))
 time_elapsed(START)                           # Time elapsed in the process
 
 # %% =======================================================================
 # Initial Curves
 # ==========================================================================
-print('█████████████████████ wc vs h, and wc vs Ta ██████████████████████')
+print(' wc vs h, and wc vs Ta '.center(width, '█'))
 curves_sel = [curves[i] for i in [16, 11, 12, 6]]
 # Curve  of h vs wc --------------------------------------------------------
 fig = plot1(curves_sel, DF, loc='upper left');  #plt.ylim([2,12]); plt.show()
@@ -254,7 +256,7 @@ time_elapsed(START)             # Time elapsed in the process
 # Sigmoid functions
 # ==========================================================================
 # Getting  bound between water-in-oil & transition & oil-in-water ----------
-print('███████████████████ Genering sigmoid function ████████████████████')
+print(' Genering sigmoid function '.center(width, '█'))
 df = DF[DF['curve']==curves[12]] # dataframe for only this curve
 wc = np.array( df['wc']);                   # watercut [%]
 h = np.array(df['dp']*1e5/(df['rho']*9.81*8)) # pressure head [m]
@@ -277,7 +279,7 @@ tikz_save('images/sigmoid.tex', figure=fig)
 # %% =======================================================================
 # Get Data of DF and analysis data for all vibration analysis
 # ==========================================================================
-print('█████████ Getting data of one curve for sensor analysis ██████████')
+print(' Getting data of one curve for sensor analysis '.center(width, '█'))
 curve = curves[2];  print('the selected curve is ███ %s ███'%(curve))
 df = DF[DF['curve']==curve]       # dataframe for the corresponding curve
 [i1, i2] = [np.where(df.index==df[i])[0][0] for i in ['i1', 'i2']]  #
@@ -291,7 +293,7 @@ time_elapsed(START)             # Time elapsed in the process
 # %% =======================================================================
 # Get fft plots all signals
 # ==========================================================================
-print('██████████████████████ Analysis of sensors ███████████████████████')
+print(' Analysis of sensors '.center(width, '█'))
 print('the selected curve is ███ %s ███'%(curve))
 n = np.where(signal.f>=1000)[0][0]; x = df['wc']
 y = signal.f[:n:512];               z = np.log10(vib_arr[:, :n:512, :])
@@ -309,7 +311,7 @@ for j, key in enumerate(keys):
 # %% =======================================================================
 # Spectrum fft analysis
 # ==========================================================================
-print('████████ Analysis of spectrum changes in phase inversion █████████')
+print(' Analysis of spectrum changes in phase inversion '.center(width, '█'))
 print('the selected curve is ███ %s ███'%(curve))
 index = [15, 30, 50, 57];
 [n, n1, n2] = [np.where(signal.f>=i)[0][0] for i in [750, 1000, 5000]]
@@ -326,16 +328,18 @@ time_elapsed(START)             # Time elapsed in the process
 # %% =======================================================================
 # Parameter Results
 # ==========================================================================
-print('███████ Join statistics results for all data and analysis ████████') 
+print(' Join statistics results for all data and analysis '.center(
+  width, '█')) 
 for key in keys:
   path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   
   PR_i = pd.DataFrame(h5todict(path_pr))    # PR results
   PR_i = PR_i[columns]                      # filter by columns
-  PR_i.columns =[ i + '_' + key for i in PR_i.columns] # add key name
+  PR_i.columns = [ i + '_' + key for i in PR_i.columns] # add key name
   PR = PR_i if key== keys[0] else pd.concat([PR , PR_i], axis=1) 
 time_elapsed(START)             # Time elapsed in the process
 # Results dataframe --------------------------------------------------------
-print('████ feature selection through pearson correlation analysis █████')
+print(' feature selection through pearson correlation analysis '.center(
+  width, '█'))
 #fig1, _, _ = pearson_bar(DF, PR, 'wc', 'water cut')
 #fig2, _, _ = pearson_bar(DF, PR, 'dp', '$\Delta p$ [bar]')
 FT = pd.DataFrame(columns=keys, index=range(4)) # Resume r value for keys
@@ -355,7 +359,7 @@ FT.astype(float).round(decimals=2).to_latex(buf='tables/table4.tex'); FT
 # %% =======================================================================
 # compare features behavior
 # ==========================================================================
-print('██████████████████ feature behavior comparison ███████████████████')
+print(' feature behavior comparison '.center(width, '█'))
 # plot best features -------------------------------------------------------
 for feature, key in zip(F[-2:], K[-2:]):    # evaluate the two best features
   path_pr = '/'.join(['results', key + '_' + norm + '.h5'])   # path   
@@ -367,7 +371,7 @@ time_elapsed(START)             # Time elapsed in the process
 # %% =======================================================================
 # Logistic regression two dimension
 # ==========================================================================
-print('█████████████████████ logistic regression ████████████████████████')
+print(' logistic regression '.center(width, '█'))
 I = DF[DF['class']!=0].index; m = len(I) # filter class 1 and 2
 train, test = train_test(m, 10)   # get aleatory train division of 10%
 split = np.zeros(m);  split[train] = 1  # data is for train=1 or test=0

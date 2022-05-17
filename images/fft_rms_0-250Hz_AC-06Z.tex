@@ -40,14 +40,6 @@ yticklabels={
   {50 [Hz], 162 [mPa-s], 43   [\(\displaystyle \mathrm{m^3/h}\)]}
 }
 ]
-\path [draw=black, line width=0.12pt]
-(axis cs:3.85221719033356,9.5)
---(axis cs:4.87485213606981,9.5);
-
-\path [draw=black, line width=0.12pt]
-(axis cs:3.85221719033356,13.5)
---(axis cs:4.87485213606981,13.5);
-
 \addplot [semithick, darkslategray76, mark=-, mark size=3, mark options={solid}, only marks]
 table {%
 4.61253301018761 0
@@ -786,6 +778,14 @@ table {%
 3.87241398236695 16
 };
 \addlegendentry{oil-in-water}
+\path [draw=black, line width=0.12pt]
+(axis cs:3.85221719033356,9.5)
+--(axis cs:4.87485213606981,9.5);
+
+\path [draw=black, line width=0.12pt]
+(axis cs:3.85221719033356,13.5)
+--(axis cs:4.87485213606981,13.5);
+
 \end{axis}
 
 \end{tikzpicture}
