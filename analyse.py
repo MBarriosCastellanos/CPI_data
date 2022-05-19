@@ -76,15 +76,17 @@ def scatter3d (x, y, z, keys, lims, rows=2, cols=2,
   fig.colorbar(cs, ax=axs.flat[-1], location='right') # colorbar
   fig.legend(lbs, loc='upper left', bbox_to_anchor=(0.92, 0.8)) #legend
   return fig  #return figure
-def spectrum(f, fft, df, I, j, n2, keys, n1=0, low_data=False):
+def spectrum(f, fft, df, I, j, n2, keys, n1=0, low_data=False, 
+  lin_log=True):
   fig, axs = plt.subplots(len(I), 1, sharex=True, sharey=True)
   m = fft[I, n1:n2, j].max();  key = keys[j]      # max vibration
   gc = (.8,.8,.8,);   # Grid Color
+  axs = [axs] if len(I)==1 else axs
   for ax, i in zip(axs, I):
     x_j = f[n1:n2];     y_j = fft[i, n1:n2, j]
     wc = df['wc'].iloc[i]; w = df['w'].iloc[i]/60
     # harmonics ------------------------------------------------------------
-    ax.vlines([w*i for i in range(1, 7)] , 0,m*9/8, color=gc, linestyle=':')
+    ax.vlines([w*i for i in range(1, 10)] , 0,m*9/8, color=gc, linestyle=':')
     ax.vlines([w*7, w*14] , 0, m*9/8, color=gc, linestyle='--')
     ax.set_yticks([np.round(m*k/4,5) for k in range(1,5)])  # ticks
     # peaks ----------------------------------------------------------------
@@ -95,18 +97,20 @@ def spectrum(f, fft, df, I, j, n2, keys, n1=0, low_data=False):
     if low_data==True: 
       x_j = x_j[sel];     y_j = y_j[sel]
     # log plot -------------------------------------------------------------
-    ax2 = ax.twinx();           ax2.set_yscale('log')
-    ax2.plot(x_j, y_j, alpha=0.6, color=col2)
-    ax2.set_ylim([6e-5, 4e-1]); ax2.set_yticks([1e-4, 1e-3, 1e-2, 1e-1 ])
+    if lin_log:
+      ax2 = ax.twinx();           ax2.set_yscale('log')
+      ax2.plot(x_j, y_j, alpha=0.6, color=col2)
+      ax2.set_ylim([6e-5, 4e-1]); ax2.set_yticks([1e-4, 1e-3, 1e-2, 1e-1 ])
+      ax2.set_ylabel('a [$\mathrm{m/s^2}$]', color=col2)
+      ax.set_zorder(ax2.get_zorder()+12) # set axis order 
+      ax.set_ylim([0, m*9/8]);
+    else:
+      ax.set_yscale('log');       ax.set_ylim([6e-5, 1e1])
     # lin plot -------------------------------------------------------------
     ax.plot(x_j, y_j, label=('wc = %.2f%%'%wc),color=col1)
-    ax.set_ylim([0, m*9/8]);  ax.set_xlim([f[n1], f[n2]]);  
-    ax.legend(loc='upper left')
+    ax.set_xlim([f[n1], f[n2]]);  ax.legend(loc='upper left')
     ax.set_ylabel('a [$\mathrm{m/s^2}$]', color=col1)
-    ax2.set_ylabel('a [$\mathrm{m/s^2}$]', color=col2)
-    ax.set_zorder(ax2.get_zorder()+12) # set axis order 
     ax.patch.set_visible(False)        # set axis order 
-
   ax.set_xlabel('frequency [Hz]'); fig.subplots_adjust(hspace=0)
   fig.suptitle(key)
   return fig
@@ -324,6 +328,17 @@ for j, key in enumerate(keys):                # AC-05 AC-01Z
     low_data=False)
     tikz_save('images/fft_' + key + '_1-5kHz.tex', figure=fig2)
 time_elapsed(START)             # Time elapsed in the process
+
+# %% =======================================================================
+# Examples
+# ==========================================================================
+[n1, n2] = [np.where(signal.f>=i)[0][0] for i in [1000, 6000]]
+fig1 = spectrum(signal.f, vib_arr, df, [57], 5, n1, keys, low_data=True, 
+  lin_log=False)
+tikz_save('images/ranges_' + key + '_1_kHz.tex', figure=fig1)
+fig2 = spectrum(signal.f, vib_arr, df, [57], 5, n2, keys, low_data=True, 
+  lin_log=False)
+tikz_save('images/ranges_' + key + '_6_kHz.tex', figure=fig2)
 
 # %% =======================================================================
 # Parameter Results
