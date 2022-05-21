@@ -105,7 +105,7 @@ def spectrum(f, fft, df, I, j, n2, keys, n1=0, low_data=False,
       ax.set_zorder(ax2.get_zorder()+12) # set axis order 
       ax.set_ylim([0, m*9/8]);
     else:
-      ax.set_yscale('log');       ax.set_ylim([6e-5, 1e1])
+      ax.set_yscale('log');       ax.set_ylim([1e-5, 1e1])
     # lin plot -------------------------------------------------------------
     ax.plot(x_j, y_j, label=('wc = %.2f%%'%wc),color=col1)
     ax.set_xlim([f[n1], f[n2]]);  ax.legend(loc='upper left')
@@ -214,13 +214,13 @@ keys = [i[5:-3] for i in glob.glob('data/AC*')];  enum_vec(keys)
 # DF_PR signals ------------------------------------------------------------
 print(' Signals '.center(width, '█'))
 sig = ['fft'] ;                 enum_vec(sig) 
-# statistics to analyse in every signal sig---------------------------------
+# statistics to analyze in every signal sig---------------------------------
 print(' Statistical analysis for every signal '.center(width, '█'))
 stat =  [ 'mean', 'var', 'gmean', 'hmean', 'rms']
 enum_vec(stat) 
 # frequency bound to analyze -----------------------------------------------
 print(' Frequency splits for every signal '.center(width, '█'))
-var = get_var(5e3, 5e3) + get_var(2e3, 6e3) + get_var(1e3, 5e3) \
+var = get_var(5e3, 5e3) + get_var(2e3, 4e3) + get_var(1e3, 5e3) \
     + get_var(250, 1000)  + get_var(750, 750) + ['1alab']   
 enum_vec(var)                      
 # Construct column names ---------------------------------------------------
@@ -271,7 +271,7 @@ bounds = Bounds([a[0], a[1]*0.8, 0.05,  0], # optimization bound
   [a[0]*1.2, a[1], 2,  100])        # hmin, hmax - hmin, slope, wc_i
 a = minimize(lambda a: sum((sigmoid(a,wc)-h)**2), a, bounds=bounds).x
 x = np.linspace(0, 100, num=1001)          # water cut possibles
-dy_max = dsigmoid(a, a[3])  # derivate of sigmid function in wc
+dy_max = dsigmoid(a, a[3])  # derivate of sigmoid function in wc
 limit = np.where(dsigmoid(a, x)>dy_max*0.2)[0]  # transition region
 l1 = np.where(wc<x[ limit[ 0] ])[0][-1]         # begin trans
 l2 = np.where(wc>x[ limit[-1] ])[0][ 0]         # end   trans
@@ -323,22 +323,22 @@ for j, key in enumerate(keys):                # AC-05 AC-01Z
   if key == 'AC-04' or key == 'AC-01Z':       # 
     fig1 = spectrum(signal.f, vib_arr, df, index, j, n, keys,
     low_data=False)
-    tikz_save('images/fft_' + key + '_0-750Hz.tex', figure=fig1)
+    #tikz_save('images/fft_' + key + '_0-750Hz.tex', figure=fig1)
     fig2 = spectrum(signal.f, vib_arr, df, index, j, n2, keys, n1=n1,
     low_data=False)
-    tikz_save('images/fft_' + key + '_1-5kHz.tex', figure=fig2)
+    #tikz_save('images/fft_' + key + '_1-5kHz.tex', figure=fig2)
 time_elapsed(START)             # Time elapsed in the process
 
 # %% =======================================================================
 # Examples
 # ==========================================================================
-[n1, n2] = [np.where(signal.f>=i)[0][0] for i in [1000, 6000]]
-fig1 = spectrum(signal.f, vib_arr, df, [57], 5, n1, keys, low_data=True, 
+[n0, n1, n2] = [np.where(signal.f>=i)[0][0] for i in [10, 1000, 5000]]
+fig1 = spectrum(signal.f, vib_arr, df, [57], 5, n1, keys, low_data=False, 
   lin_log=False)
-tikz_save('images/ranges_' + key + '_1_kHz.tex', figure=fig1)
-fig2 = spectrum(signal.f, vib_arr, df, [57], 5, n2, keys, low_data=True, 
-  lin_log=False)
-tikz_save('images/ranges_' + key + '_6_kHz.tex', figure=fig2)
+#tikz_save('images/ranges_' + keys[5] + '_1_kHz.tex', figure=fig1)
+fig2 = spectrum(signal.f, vib_arr, df, [57], 5, n2, keys, low_data=False, 
+  lin_log=False, n1=n0)
+#tikz_save('images/ranges_' + keys[5] + '_6_kHz.tex', figure=fig2)
 
 # %% =======================================================================
 # Parameter Results
@@ -363,10 +363,10 @@ for key in keys:
   f = [i[:-len(key) - 1] for i in f]      # features and values
   FT.index = f if key == keys[0] else FT.index; FT.loc[f, key] = v
 fig3, features, _ = pearson_bar(DF, PR,   # figure of person parameters
-  'Ta', 'dimensionaless torque', ini='fft_rms', n=9)
+  'Ta', 'dimensionless torque', ini='', n=9)
 tikz_save('images/pearson.tex', figure=fig3)
-F = ['_'.join(f.split('_')[:-1]) for f in features] # Features to analyse
-K = [f.split('_')[-1] for f in features]            # Keys to analyse
+F = ['_'.join(f.split('_')[:-1]) for f in features] # Features to analyze
+K = [f.split('_')[-1] for f in features]            # Keys to analyze
 time_elapsed(START)                       # Time elapsed in the process
 FT = FT.sort_values('AC-06Y', axis=0, ascending=False)
 FT.astype(float).round(decimals=2).to_latex(buf='tables/table4.tex'); FT
@@ -406,7 +406,7 @@ for key in keys:                  # Evaluate all sensors
   bounds = np.sum([
     (np.round(X[:,1])==w)*t for w, t in zip(ws, bds[key] )], axis=0)
   # plot logit function --------------------------------------------------
-  LG = pd.DataFrame(np.c_[X, y[:,0], split, bounds], # Logistic Regresion
+  LG = pd.DataFrame(np.c_[X, y[:,0], split, bounds], # Logistic Regression
     columns= ['x', 'w', 'y', 'train','threshold'])
   FT[key] = [score(y[n,0], pred(X[n, 0], bounds[n])) for n in [test, train]]
   if any(key == np.array(['AC-01Y', 'AC-04', 'AC-06Y'])):
@@ -438,13 +438,13 @@ PR = pd.DataFrame(h5todict('results/' + key + '_' + norm + '.h5'))
 X = np.c_[np.abs(PR[feature].loc[I]) , DF['w'].loc[I]/60] # X = [f, w]
 bounds = np.sum([
   (np.round(X[:,1])==w)*t for w, t in zip(ws, bds[key] )], axis=0)
-LG = pd.DataFrame(np.c_[X, y[:,0], split, bounds], # Logistic Regresion
+LG = pd.DataFrame(np.c_[X, y[:,0], split, bounds], # Logistic Regression
     columns= ['x', 'w', 'y', 'train','threshold'])
 LG['Q'] = np.array(DF.loc[I]['Q'])
 # linear regression for plane ----------------------------------------------
 regr =linregress(ws, bds[key]); o = np.linspace(29,51)  # Omega Z
 q = np.linspace(LG['Q'].min()*0.9, LG['Q'].max()*1.1)   # flow Y
-O, Q  = np.meshgrid(o, q);  m = ['.', 'x']  # Meshgrip m
+O, Q  = np.meshgrid(o, q);  m = ['.', 'x']  # Meshgrid m
 Pr = regr.slope*O  + regr.intercept   # Parameter
 for i, title in enumerate(['test', 'train']):    # for in 0 test, 1 train
   fig = plt.figure(figsize=(13, 5)); 
