@@ -362,8 +362,10 @@ for key in keys:
   _ , f, v = pearson_bar(DF, PR, 'Ta', '',  end=key, n=4); plt.close(); 
   f = [i[:-len(key) - 1] for i in f]      # features and values
   FT.index = f if key == keys[0] else FT.index; FT.loc[f, key] = v
+  fig3, features, _ = pearson_bar(DF, PR,   # figure of person parameters
+  'Ta', 'dimensionless torque', end=key, n=8)
 fig3, features, _ = pearson_bar(DF, PR,   # figure of person parameters
-  'Ta', 'dimensionless torque', ini='', n=9)
+  'Ta', 'dimensionless torque', ini='fft_rms_0_2hHz', n=9)
 tikz_save('images/pearson.tex', figure=fig3)
 F = ['_'.join(f.split('_')[:-1]) for f in features] # Features to analyze
 K = [f.split('_')[-1] for f in features]            # Keys to analyze
