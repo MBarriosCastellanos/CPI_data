@@ -207,7 +207,7 @@ def threshold(x, b):
 print('Function created '.ljust(width, '█'))
 
 # %% =======================================================================
-# Get Data of DF and analysis data
+# Get Data of DF minimize and analysis data
 # ==========================================================================
 print(' Keys '.center(width, '█')) 
 keys = [i[5:-3] for i in glob.glob('data/AC*')];  enum_vec(keys) 
@@ -269,7 +269,8 @@ a = [h.min(), h[:-1].max() - h.min(), 1, 40]# a3 = water cut transition
 # Getting sigmoid PR through optimization ----------------------------------
 bounds = Bounds([a[0], a[1]*0.8, 0.05,  0], # optimization bound
   [a[0]*1.2, a[1], 2,  100])        # hmin, hmax - hmin, slope, wc_i
-a = minimize(lambda a: sum((sigmoid(a,wc)-h)**2), a, bounds=bounds).x
+a = minimize(lambda a: sum((sigmoid(a,wc)-h)**2), a, bounds=bounds,
+  method='L-BFGS-B').x
 x = np.linspace(0, 100, num=1001)          # water cut possibles
 dy_max = dsigmoid(a, a[3])  # derivate of sigmoid function in wc
 limit = np.where(dsigmoid(a, x)>dy_max*0.2)[0]  # transition region
@@ -389,20 +390,21 @@ time_elapsed(START)             # Time elapsed in the process
 # Logistic regression two dimension
 # ==========================================================================
 print(' logistic regression '.center(width, '█'))
-I = DF[DF['class']!=0].index; m = len(I) # filter class 1 and 2
-train, test = train_test(m, 10)   # get aleatory train division of 10%
+I = DF[DF['class']!=0].index; m = len(I)# filter class 1 and 2
+train, test = train_test(m, 10)         # get aleatory train division of 10%
 split = np.zeros(m);  split[train] = 1  # data is for train=1 or test=0
 y = 2 - np.array(DF['class'].loc[I]); y = y.reshape(m, 1)   # y
-ws = [30, 40, 50]                 # angular velocities in Hz
+ws = [30, 40, 50]                       # angular velocities in Hz
 FT = pd.DataFrame(index=['test score', 'train score']) # Result dataframe
-feature = F[0]; bds = {}          # 'fft_rms_0_2hHz' , boundaries
+feature = F[0]; bds = {}                # 'fft_rms_0_2hHz' , boundaries
 print('the selected feature is ███ %s ███'%(feature))
-for key in keys:                  # Evaluate all sensors
+for key in keys:                        # Evaluate all sensors
   PR = pd.DataFrame(h5todict('results/' + key + '_' + norm + '.h5'))    
   X = np.c_[np.abs(PR[feature].loc[I]) , DF['w'].loc[I]/60] # X = [f, w]  
   # resolve logit function -----------------------------------------------
-  opt = minimize(lambda b: cost(b, X[train], y[train]), [0,0,0])# optimize 
-  b = opt.x       # predicted constants of logit function
+  opt = minimize(lambda b: cost(b, X[train], y[train]), [0,0,0],
+    method='L-BFGS-B')# optimize 
+  b = opt.x           # predicted constants of logit function
   bs = [np.array([b[0] + b[2]*w, b[1]]) for w in ws]  # adjust to one dim
   bds[key] = [threshold(X, b) for b in bs]# predicted threshold boundaries
   bounds = np.sum([
@@ -414,7 +416,7 @@ for key in keys:                  # Evaluate all sensors
   if any(key == np.array(['AC-01Y', 'AC-04', 'AC-06Y'])):
     fig5 = plot_logit(LG, bs, key, feature, FT[key])
     tikz_save('images/logit_fft_rms_0-250Hz_' + key + '.tex', figure=fig5)
-time_elapsed(START);             # Time elapsed in the process
+time_elapsed(START);                    # Time elapsed in the process
 FT.sort_values('test score', axis=1, ascending=False)
 (FT*100).astype(float).round(decimals=2).to_latex(buf='tables/table5.tex'); 
 FT
@@ -429,7 +431,7 @@ for i, key in enumerate(bds):
   c = colors[2] if key[4]=='6' else c
   ax =plt.plot(bds[key], ws, styles[i], label=key, color=c)
 plt.legend(); plt.xlabel('$\Omega $ [Hz]'); plt.ylabel('fft rms 0-250 [Hz]')
-tikz_save('images/comparisson.tex')
+tikz_save('images/comparison.tex')
 
 
 # %% =======================================================================

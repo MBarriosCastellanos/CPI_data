@@ -8,6 +8,7 @@
     "argsort",
     "astype",
     "barh",
+    "BFGS",
     "bmean",
     "bstd",
     "btype",

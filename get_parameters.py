@@ -3,7 +3,7 @@
 # ==========================================================================
 from silx.io.dictdump import h5todict, dicttoh5 # import, export h5 files
 import numpy as np                              # mathematics
-import pandas as pd                             # mathematics\
+import pandas as pd                             # mathematics
 import glob                                     # inspect folders
 import time                                     # time calculation
 from scipy.optimize import minimize, Bounds     # optimization arguments
@@ -12,6 +12,7 @@ from functions import sigmoid, dsigmoid, printProgressBar,intt, time_elapsed
 #sigmoid function, progress bar, integration, time calculation
 from functions import enum_vec#, plot_sigmoid   
 # print list, plot sigmoid 
+from functions import plot_sigmoid
 d_s_a = {                               # arguments transfrom in h5 file
   'compression':'gzip', 'shuffle':True, 'fletcher32':True }
 print('Basic Libraries imported')
@@ -80,18 +81,19 @@ for curve in curves:        # for every curve
   # Getting sigmoid PR through optimization ------------------------
   bounds = Bounds([a[0], a[1]*0.8, 0.05,  0], # optimization bound
     [a[0]*1.2, a[1], 2,  100])                # hmin, hmax - hmin, slope, wc_i
-  a = minimize(lambda a: sum((sigmoid(a,wc)-h)**2), a, bounds=bounds).x
+  a = minimize(lambda a: sum((sigmoid(a,wc)-h)**2), a, bounds=bounds,
+    method='L-BFGS-B').x
   x = np.linspace(0, 100, num=10001)          # water cut possibles
   dy_max = dsigmoid(a, a[3])  # derivate of sigmid function in wc
   limit = np.where(dsigmoid(a, x)>dy_max*0.2)[0] # transition region
   I = df.index                         # index of this curve
-  l1 = np.where(wc<x[ limit[ 0] ])[0][-1];  i1.append(I[l1])  # begin trans
-  l2 = np.where(wc>x[ limit[-1] ])[0][ 0];  i2.append(I[l2])  # end   trans
+  l1 = np.where(wc<a[3])[0][-1];  i1.append(I[l1])  # begin trans
+  l2 = np.where(wc>=a[3])[0][ 0];  i2.append(I[l2])  # end   trans
   #plot_sigmoid(x, a, wc, h, l1, l2, a[3])
 print('The labeling of the emulsion kind is %s'%(
   all(DF['i1'].unique()==i1) and  all(DF['i2'].unique()==i2)))
-del a, df, wc, h, bounds, Bounds, minimize, dsigmoid, dy_max 
-del x, limit, l1, l2, curve
+#del a, df, wc, h, bounds, Bounds, minimize, dsigmoid, dy_max 
+#del x, limit, l1, l2, curve
 time_elapsed(START)             # Time elapsed in the process
 
 
