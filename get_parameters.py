@@ -13,7 +13,7 @@ from functions import sigmoid, dsigmoid, printProgressBar,intt, time_elapsed
 from functions import enum_vec#, plot_sigmoid   
 # print list, plot sigmoid 
 from functions import plot_sigmoid
-d_s_a = {                               # arguments transfrom in h5 file
+d_s_a = {                               # arguments transform in h5 file
   'compression':'gzip', 'shuffle':True, 'fletcher32':True }
 print('Basic Libraries imported')
 
@@ -38,7 +38,7 @@ i_key = int(input('Please enter a position key:\n'))
 key = keys[i_key];  print('the selected key is ███ %s ███'%(key))
 # DF_PR signals ------------------------------------------------------------
 sig = [ 'time', 'fft', 'welch']  
-# statistics to analyse in every signal sig---------------------------------
+# statistics to analyze in every signal sig---------------------------------
 stat =  [ 'mean', 'var', 'gmean', 'hmean', 'rms', 'crest', 'wmean']
 # frequency bound to analyze -----------------------------------------------
 var = [''] + get_var(5e3, 10e3) + get_var(2e3, 6e3) + get_var(1e3, 5e3) \
@@ -84,7 +84,7 @@ for curve in curves:        # for every curve
   a = minimize(lambda a: sum((sigmoid(a,wc)-h)**2), a, bounds=bounds,
     method='L-BFGS-B').x
   x = np.linspace(0, 100, num=10001)          # water cut possibles
-  dy_max = dsigmoid(a, a[3])  # derivate of sigmid function in wc
+  dy_max = dsigmoid(a, a[3])  # derivate of sigmoid function in wc
   limit = np.where(dsigmoid(a, x)>dy_max*0.2)[0] # transition region
   I = df.index                         # index of this curve
   l1 = np.where(wc<a[3])[0][-1];  i1.append(I[l1])  # begin trans
@@ -122,7 +122,7 @@ if len(glob.glob(path_PR))== 0:                   # if results exist
   for b, bound in enumerate(bounds):        # in every boundary
     prefix = '         %s/%s '%(b+1,len_b)
     if len(bound)==1:                       # for the first boundary
-      col = signals.sts(sig,  bound[0], norm, stat) # coluna
+      col = signals.sts(sig,  bound[0], norm, stat) # column
       printProgressBar(b + 1, len_b, prefix = prefix)
     else:                     # others bound
       for i, bdy in enumerate(bound):
