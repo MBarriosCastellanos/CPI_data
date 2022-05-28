@@ -270,7 +270,7 @@ a = [h.min(), h[:-1].max() - h.min(), 1, 40]# a3 = water cut transition
 bounds = Bounds([a[0], a[1]*0.8, 0.05,  0], # optimization bound
   [a[0]*1.2, a[1], 2,  100])        # hmin, hmax - hmin, slope, wc_i
 a = minimize(lambda a: sum((sigmoid(a,wc)-h)**2), a, bounds=bounds,
-  method='L-BFGS-B').x
+  method='BFGS').x
 x = np.linspace(0, 100, num=1001)          # water cut possibles
 dy_max = dsigmoid(a, a[3])  # derivate of sigmoid function in wc
 limit = np.where(dsigmoid(a, x)>dy_max*0.2)[0]  # transition region
@@ -304,10 +304,10 @@ n = np.where(signal.f>=1000)[0][0]; x = df['wc']
 y = signal.f[:n:512];               z = np.log10(vib_arr[:, :n:512, :])
 lims = [0, i1 + 1, i2, len(x) + 1]
 fig1 = scatter3d(x, y, z[:,:, 3:7], keys[3:7], lims)
-#tikz_save('images/sensors1.tex', figure=fig1)
+tikz_save('images/sensors1.tex', figure=fig1)
 fig2 = scatter3d(x, y, np.dstack((z[:,:, :3], z[:,:, 7:])), 
   keys[:3] + keys[7:], lims, cols=3)
-#tikz_save('images/sensors2.tex', figure=fig2)
+tikz_save('images/sensors2.tex', figure=fig2)
 time_elapsed(START)             # Time elapsed in the process
 for j, key in enumerate(keys):
   fig = scatter1d(x, y, z[:,:, j], keys[j], lims)
@@ -336,10 +336,10 @@ time_elapsed(START)             # Time elapsed in the process
 [n0, n1, n2] = [np.where(signal.f>=i)[0][0] for i in [10, 1000, 5000]]
 fig1 = spectrum(signal.f, vib_arr, df, [57], 5, n1, keys, low_data=False, 
   lin_log=False)
-#tikz_save('images/ranges_' + keys[5] + '_1_kHz.tex', figure=fig1)
+tikz_save('images/ranges_' + keys[5] + '_1_kHz.tex', figure=fig1)
 fig2 = spectrum(signal.f, vib_arr, df, [57], 5, n2, keys, low_data=False, 
   lin_log=False, n1=n0)
-#tikz_save('images/ranges_' + keys[5] + '_6_kHz.tex', figure=fig2)
+tikz_save('images/ranges_' + keys[5] + '_6_kHz.tex', figure=fig2)
 
 # %% =======================================================================
 # Parameter Results
@@ -403,7 +403,7 @@ for key in keys:                        # Evaluate all sensors
   X = np.c_[np.abs(PR[feature].loc[I]) , DF['w'].loc[I]/60] # X = [f, w]  
   # resolve logit function -----------------------------------------------
   opt = minimize(lambda b: cost(b, X[train], y[train]), [0,0,0],
-    method='L-BFGS-B')# optimize 
+    method='BFGS')# optimize 
   b = opt.x           # predicted constants of logit function
   bs = [np.array([b[0] + b[2]*w, b[1]]) for w in ws]  # adjust to one dim
   bds[key] = [threshold(X, b) for b in bs]# predicted threshold boundaries

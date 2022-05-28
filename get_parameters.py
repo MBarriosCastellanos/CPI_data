@@ -82,13 +82,13 @@ for curve in curves:        # for every curve
   bounds = Bounds([a[0], a[1]*0.8, 0.05,  0], # optimization bound
     [a[0]*1.2, a[1], 2,  100])                # hmin, hmax - hmin, slope, wc_i
   a = minimize(lambda a: sum((sigmoid(a,wc)-h)**2), a, bounds=bounds,
-    method='L-BFGS-B').x
+    method='BFGS').x
   x = np.linspace(0, 100, num=10001)          # water cut possibles
   dy_max = dsigmoid(a, a[3])  # derivate of sigmoid function in wc
   limit = np.where(dsigmoid(a, x)>dy_max*0.2)[0] # transition region
   I = df.index                         # index of this curve
-  l1 = np.where(wc<a[3])[0][-1];  i1.append(I[l1])  # begin trans
-  l2 = np.where(wc>=a[3])[0][ 0];  i2.append(I[l2])  # end   trans
+  l1 = np.where(wc<x[ limit[ 0] ])[0][-1];  i1.append(I[l1])  # begin trans
+  l2 = np.where(wc>x[ limit[-1] ])[0][ 0];  i2.append(I[l2])  # end   trans
   #plot_sigmoid(x, a, wc, h, l1, l2, a[3])
 print('The labeling of the emulsion kind is %s'%(
   all(DF['i1'].unique()==i1) and  all(DF['i2'].unique()==i2)))
