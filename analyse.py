@@ -489,3 +489,27 @@ ax.view_init(22, 250);          ax.set_title('intermittent')
 ax.legend(['boundary', 'transition'], 
   ncol=2, loc='lower center');  fig.tight_layout()
 tikz_save('images/bound_intermittent.tex', figure=fig)
+
+# %% =======================================================================
+# show fft
+# ==========================================================================
+from scipy.fft import fft, fftfreq
+t = np.arange(0, 2001)/200                            # time vector
+y = 5*np.sin(2*np.pi*t*20) + 3*np.sin(2*np.pi*t*60)   # signal vector
+m = len(y)                # len of signal vector
+fs = (len(t)-1)/t.max()   # sampling frequency
+# programming function equal to  ============================================
+fourier = fft(y)[5:m//2]  # fast fourier tranform
+f = fftfreq(m, 1/fs)[5:m//2]
+xf = 2.0/m*np.abs(fourier) 
+plt.plot(f, xf, linewidth=3, alpha=.5, label= 'scipy')
+# Analytical solution  ======================================================
+fourier1 = np.array([np.sum(y * np.exp(-2j * np.pi * i * np.arange(m)/m)) 
+  for i in range(m//2)])
+xf1 = 2.0/m*np.abs(fourier1[5:])
+f1 = np.array([j*fs/m for j in range(m//2)])[5:]
+plt.plot(f1, xf1, '--', linewidth=3, alpha=.5, label='analytical')
+plt.xlabel('frequency [Hz]'); plt.ylabel('Amplitude')
+plt.legend()
+
+# %%
