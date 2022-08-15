@@ -366,7 +366,7 @@ for key in keys:
   fig3, features, _ = pearson_bar(DF, PR,   # figure of person parameters
   'Ta', 'dimensionless torque', end=key, n=8)
 fig3, features, _ = pearson_bar(DF, PR,   # figure of person parameters
-  'Ta', 'dimensionless torque', ini='fft_rms_0_2hHz', n=9)
+  'Ta', 'dimensionless torque', ini='fft_rms_0_2hHz', n=10)
 tikz_save('images/pearson.tex', figure=fig3)
 F = ['_'.join(f.split('_')[:-1]) for f in features] # Features to analyze
 K = [f.split('_')[-1] for f in features]            # Keys to analyze
