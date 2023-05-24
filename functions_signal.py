@@ -95,7 +95,7 @@ class time_signal(object):
     fs = len(self.t)/(self.t.max()-self.t.min())        # sampling frequency
     self.f, self.Y = dft( mul(win, self.X), fs, self.n) # fft in amplitude
     # welch transform ======================================================
-    self.f_w, self.Y_w  = signal.welch(self.X, fs, window='hanning', axis=1) 
+    self.f_w, self.Y_w  = signal.welch(self.X, fs, window='hann', axis=1) 
     # cut frequencies after 10 kHz =========================================
     if self.f.max()>10100:
       [self.f, self.Y] = get_y([self.f, self.Y], [10, 10100], axis='both') 

@@ -512,4 +512,40 @@ plt.plot(f1, xf1, '--', linewidth=3, alpha=.5, label='analytical')
 plt.xlabel('frequency [Hz]'); plt.ylabel('Amplitude')
 plt.legend()
 
-# %%
+# %% =======================================================================
+# new analysis of dimensionless Torque linear regression
+# ==========================================================================
+# import libraries ---------------------------------------------------------
+import statsmodels.api as sm
+# import data to analysis --------------------------------------------------
+path_pr = 'results/AC-01Y_log.h5'
+PR = pd.DataFrame(h5todict(path_pr))
+DF = pd.DataFrame(h5todict('data/DF.h5'))
+# perform linear regression-------------------------------------------------
+x = np.array(PR.fft_rms_0_2hHz)
+y = np.array(DF.Ta)
+X = sm.add_constant(x)
+model = sm.OLS(y, X)
+results = model.fit()
+coef_ = results.params
+p_value = results.pvalues
+y_pred = coef_[0] + coef_[1]*x
+error = np.abs(y - y_pred)/y*100
+x_plot = np.arange(x.min(), x.max())
+y_plot = coef_[0] + coef_[1]*x_plot
+print(results.summary())
+print("R-squared:", results.rsquared)
+print("mape:", np.mean(error))
+print('m : %.4f, p_value : %.4e'%(coef_[1], p_value[1]))
+print('b : %.4f, p_value : %.4e'%(coef_[0], p_value[0]))
+# analyse statistical sifnificance of linear model --------------------------
+fig, ax = plt.subplots(constrained_layout=True)
+ax.plot(x, y, 'o', color=col2, label='data', alpha=0.5)
+ax.plot(x_plot, y_plot, '-', color=col1, label='linear model prediction')
+ax.plot(x_plot, 0.85*y_plot, '--', color=col3, label= '15% error')
+ax.plot(x_plot, 1.15*y_plot, '--', color=col3)
+ax.set_ylabel('$\Pi$'); 
+ax.set_xlabel('$\\mathbb{R}(\chi_{\{ 9 \}} )$')
+#fig.colorbar(cs, ax=ax, location='right') # colorbar
+fig.legend( loc='upper left', bbox_to_anchor=(0.12, 0.95)) #legend
+tikz_save('images/pearson_new.tex', figure=fig)
